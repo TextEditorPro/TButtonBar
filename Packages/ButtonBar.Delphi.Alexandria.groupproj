@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{AA39694A-4862-440C-BD18-EC8829062854}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="ButtonBar.Delphi.Alexandria.Runtime.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ButtonBar.Delphi.Alexandria.Designtime.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ButtonBar_Delphi_Alexandria_Runtime">
+        <MSBuild Projects="ButtonBar.Delphi.Alexandria.Runtime.dproj"/>
+    </Target>
+    <Target Name="ButtonBar_Delphi_Alexandria_Runtime:Clean">
+        <MSBuild Projects="ButtonBar.Delphi.Alexandria.Runtime.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ButtonBar_Delphi_Alexandria_Runtime:Make">
+        <MSBuild Projects="ButtonBar.Delphi.Alexandria.Runtime.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ButtonBar_Delphi_Alexandria_Designtime">
+        <MSBuild Projects="ButtonBar.Delphi.Alexandria.Designtime.dproj"/>
+    </Target>
+    <Target Name="ButtonBar_Delphi_Alexandria_Designtime:Clean">
+        <MSBuild Projects="ButtonBar.Delphi.Alexandria.Designtime.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ButtonBar_Delphi_Alexandria_Designtime:Make">
+        <MSBuild Projects="ButtonBar.Delphi.Alexandria.Designtime.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ButtonBar_Delphi_Alexandria_Runtime;ButtonBar_Delphi_Alexandria_Designtime"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ButtonBar_Delphi_Alexandria_Runtime:Clean;ButtonBar_Delphi_Alexandria_Designtime:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ButtonBar_Delphi_Alexandria_Runtime:Make;ButtonBar_Delphi_Alexandria_Designtime:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
