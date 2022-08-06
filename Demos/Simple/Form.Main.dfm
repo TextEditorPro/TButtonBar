@@ -2,9 +2,10 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'TButtonBar Demo'
-  ClientHeight = 441
-  ClientWidth = 624
+  ClientHeight = 447
+  ClientWidth = 629
   Color = clWindow
+  DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -12
@@ -15,7 +16,7 @@ object MainForm: TMainForm
   object ButtonBar1: TButtonBar
     Left = 0
     Top = 0
-    Width = 624
+    Width = 629
     Height = 60
     ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
@@ -47,6 +48,7 @@ object MainForm: TMainForm
         Counter.Visible = True
         ImageIndex = 2
         Name = 'Demo3'
+        OnClick = ButtonBar1Items2Click
       end
       item
         Caption = 'Demo4'
@@ -59,9 +61,9 @@ object MainForm: TMainForm
   end
   object ButtonBar2: TButtonBar
     Left = 0
-    Top = 401
-    Width = 624
-    Height = 40
+    Top = 392
+    Width = 629
+    Height = 55
     Align = alBottom
     ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
@@ -75,10 +77,10 @@ object MainForm: TMainForm
     Options = [opShowCaptions]
   end
   object ButtonBar3: TButtonBar
-    Left = 584
+    Left = 589
     Top = 60
     Width = 40
-    Height = 341
+    Height = 332
     Align = alRight
     ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
@@ -102,16 +104,12 @@ object MainForm: TMainForm
   object ButtonBar4: TButtonBar
     Left = 0
     Top = 60
-    Width = 141
-    Height = 341
+    Width = 203
+    Height = 332
     Align = alLeft
     ButtonSize = 16
-    Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
-    Font.Height = -9
-    Font.Name = 'Segoe UI'
-    Font.Style = []
     Orientation = soVertical
+    ParentFont = True
     TabOrder = 3
     Images = ImageList
     Items = <
@@ -121,23 +119,52 @@ object MainForm: TMainForm
         Layout = blGlyphLeft
       end
       item
-        Caption = 'Test  2 - longer text'
+        Caption = 'Test  2'
         ImageIndex = 1
         Layout = blGlyphLeft
       end
       item
-        Caption = 'Test 3'
+        Caption = 'Test 3 - Visible false'
         ImageIndex = 0
         Layout = blGlyphLeft
+        Visible = False
+      end
+      item
+        Style = stDivider
+      end
+      item
+        Style = stDivider
+        Visible = False
+      end
+      item
+        Style = stDivider
+        Visible = False
+      end
+      item
+        Caption = 'Test 4 - Auto remove dividers'
+        ImageIndex = 2
+        Layout = blGlyphLeft
+      end
+      item
+        Style = stDivider
+      end
+      item
+        Caption = 'Test 5 - &Formatted caption...'
+        ImageIndex = 1
+        Layout = blGlyphLeft
+      end
+      item
+        Style = stDivider
+        Visible = False
       end>
-    Options = [opShowCaptions]
+    Options = [opShowCaptions, opFormatCaptions]
   end
   object ImageList: TImageList
     ColorDepth = cd32Bit
     Height = 32
     Width = 32
-    Left = 150
-    Top = 144
+    Left = 226
+    Top = 100
     Bitmap = {
       494C010103000800040020002000FFFFFFFF2110FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000800000002000000001002000000000000040
@@ -675,15 +702,15 @@ object MainForm: TMainForm
       000000000000}
   end
   object PopupMenuDemo2: TPopupMenu
-    Left = 242
-    Top = 150
+    Left = 318
+    Top = 106
     object MenuItemPopupMenuDemo2: TMenuItem
       Action = ActionDemo2Popup
     end
   end
   object ActionList: TActionList
-    Left = 336
-    Top = 148
+    Left = 412
+    Top = 104
     object ActionDemo2: TAction
       Caption = 'Demo2'
       ImageIndex = 1
@@ -699,8 +726,8 @@ object MainForm: TMainForm
     end
   end
   object PopupMenuDemo4: TPopupMenu
-    Left = 242
-    Top = 220
+    Left = 318
+    Top = 176
     object MenuItemPopupMenuDemo4: TMenuItem
       Action = ActionDemo4Popup
     end

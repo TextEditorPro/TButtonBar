@@ -1,5 +1,7 @@
 ﻿unit ButtonBar.Control;
 
+// TODO: AutoSize
+
 interface
 
 uses
@@ -55,6 +57,7 @@ type
     FCounter: TButtonBarItemCounter;
     FDropdownMenu: TPopupMenu;
     FDropdownButtonVisible: Boolean;
+    FInvisible: Boolean;
     FOnBeforeMenuDropdown: TNotifyEvent;
     FSkipDropdown: Boolean;
     FStyle: TButtonBarControlStyle;
@@ -79,6 +82,7 @@ type
     property Counter: TButtonBarItemCounter read FCounter write FCounter;
     property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
     property DropdownButtonVisible: Boolean read FDropdownButtonVisible write FDropdownButtonVisible;
+    property Invisible: Boolean read FInvisible write FInvisible default False;
     property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
     property Style: TButtonBarControlStyle read FStyle write SetStyle default csButton;
   end;
@@ -205,8 +209,8 @@ type
     procedure SetReflected(const AValue: Boolean);
 {$ENDIF}
   protected
-    function GetDisplayName: string; override;
     function GetActionLinkClass: TButtonBarItemActionLinkClass;
+    function GetDisplayName: string; override;
     procedure ActionChange(Sender: TObject; const ACheckDefaults: Boolean); dynamic;
     procedure SetIndex(AValue: Integer); override;
     property ActionLink: TButtonBarItemActionLink read FActionLink write FActionLink;
@@ -257,7 +261,7 @@ type
   end;
 
   TButtonBarPosition = (poHorizontal, poVertical);
-  TButtonBarOption = (opShowCaptions, opShowHints);
+  TButtonBarOption = (opShowCaptions, opFormatCaptions, opShowHints);
   TButtonBarOptions = set of TButtonBarOption;
 
   TButtonBar = class(TButtonBarPageScroller)
@@ -290,6 +294,8 @@ type
     procedure UpdateButtons(const AIsLast: Boolean = False);
     procedure WMPaint(var AMessage: TWMPaint); message WM_PAINT;
     procedure WMSize(var AMessage: TWMSize); message WM_SIZE;
+  protected
+    function FormatCaption(const ACaption: string): string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -325,10 +331,10 @@ type
   ESTButtonBarException = class(Exception);
 
 resourcestring
-  ButtonBarNoItemFoundWithName = 'No item found with name "%s"';
-  ButtonBarNoItemsFound = ' No items found ';
   ButtonBarItemDividerChar = '-';
   ButtonBarItemUnnamed = '(unnamed)';
+  ButtonBarNoItemFoundWithName = 'No item found with name "%s"';
+  ButtonBarNoItemsFound = ' No items found ';
 
 { TButtonBarControl }
 
@@ -339,6 +345,7 @@ begin
   FCounter := TButtonBarItemCounter.Create;
 
   FArrowColor := TColors.SysWindowText;
+  FInvisible := False;
   FStyle := csButton;
 
 {$IFDEF ALPHASKINS}
@@ -469,73 +476,90 @@ procedure TButtonBarControl.Paint;
 var
   LLeft, LTop: Integer;
   LRect: TRect;
+  LCanvas: TCanvas;
 begin
-  case FStyle of
-    csHorizontalDivider:
+  LCanvas := TCanvas.Create;
+  try
+    LCanvas.Handle := Canvas.Handle;
+
+    case FStyle of
+      csHorizontalDivider:
+        begin
+          LRect := ClientRect;
+
+          LRect.Top := LRect.Height div 2 - 1;
+          LRect.Left := LRect.Left + Margin;
+          LRect.Right := LRect.Right - Margin;
+
+          DrawEdge(LCanvas.Handle, LRect, BDR_SUNKENOUTER, BF_TOP);
+        end;
+      csVerticalDivider:
+        begin
+          LRect := ClientRect;
+
+          LRect.Left := LRect.Width div 2;
+          LRect.Top := LRect.Top + Margin;
+          LRect.Bottom := LRect.Bottom - Margin;
+
+          DrawEdge(LCanvas.Handle, LRect, BDR_SUNKENOUTER, BF_LEFT);
+        end;
+      csDropdown:
+        begin
+          inherited;
+
+          with ClientRect do
+          begin
+            LLeft := Left + (Width - FArrowBmp.Width) div 2 + 1;
+            LTop := Top + (Height - FArrowBmp.Height) div 2;
+          end;
+
+          LCanvas.Draw(LLeft, LTop, FArrowBmp);
+        end;
+    else
+      inherited;
+
+      if FCounter.Visible then
       begin
-        LRect := ClientRect;
+        LCanvas.Font.Size := ScaleInt(FCounter.FontSize);
+        LCanvas.Brush.Style := bsClear;
 
-        LRect.Top := LRect.Height div 2 - 1;
-        LRect.Left := LRect.Left + Margin;
-        LRect.Right := LRect.Right - Margin;
+        if not Enabled then
+          LCanvas.Font.Color := clGray
+        else
+        if FCounter.Value = 0 then
+          LCanvas.Font.Color := FCounter.Colors.Zero
+        else
+          LCanvas.Font.Color := FCounter.Colors.Other;
 
-        DrawEdge(Canvas.Handle, LRect, BDR_SUNKENOUTER, BF_TOP);
+        LCanvas.TextOut(2, 0, IntToStr(FCounter.Value));
       end;
-    csVerticalDivider:
+
+      if Invisible then
       begin
-        LRect := ClientRect;
-
-        LRect.Left := LRect.Width div 2;
-        LRect.Top := LRect.Top + Margin;
-        LRect.Bottom := LRect.Bottom - Margin;
-
-        DrawEdge(Canvas.Handle, LRect, BDR_SUNKENOUTER, BF_LEFT);
+        LCanvas.Brush.Color := TColors.Gray;
+        LCanvas.Brush.Style := bsFDiagonal;
+        LCanvas.Pen.Color := TColors.Gray;
+        LCanvas.Rectangle(ClientRect);
       end;
-    csDropdown:
-      begin
-        inherited;
 
+      if Assigned(FDropdownMenu) and FDropdownButtonVisible then
+      begin
         with ClientRect do
         begin
-          LLeft := Left + (Width - FArrowBmp.Width) div 2 + 1;
+          if UseRightToLeftAlignment then
+             LLeft := ScaleInt(8)
+           else
+             LLeft := Right - ScaleInt(12);
+
           LTop := Top + (Height - FArrowBmp.Height) div 2;
         end;
 
-        Canvas.Draw(LLeft, LTop, FArrowBmp);
+        LCanvas.Draw(LLeft, LTop, FArrowBmp);
       end;
-  else
-    inherited;
-
-    if FCounter.Visible then
-    begin
-      Canvas.Font.Size := ScaleInt(FCounter.FontSize);
-      Canvas.Brush.Style := bsClear;
-
-      if not Enabled then
-        Canvas.Font.Color := clGray
-      else
-      if FCounter.Value = 0 then
-        Canvas.Font.Color := FCounter.Colors.Zero
-      else
-        Canvas.Font.Color := FCounter.Colors.Other;
-
-      Canvas.TextOut(2, 0, IntToStr(FCounter.Value));
     end;
-
-    if Assigned(FDropdownMenu) and FDropdownButtonVisible then
-    begin
-      with ClientRect do
-      begin
-        if UseRightToLeftAlignment then
-           LLeft := ScaleInt(8)
-         else
-           LLeft := Right - ScaleInt(12);
-
-        LTop := Top + (Height - FArrowBmp.Height) div 2;
-      end;
-
-      Canvas.Draw(LLeft, LTop, FArrowBmp);
-    end;
+  finally
+    LCanvas.Handle := 0;
+    LCanvas.Free;
   end;
 end;
 {$ENDIF}
@@ -1302,6 +1326,7 @@ begin
     Exit;
 
   FButtonPanel := TButtonBarPanel.Create(Self);
+  FButtonPanel.ParentDoubleBuffered := True;
   FButtonPanel.BevelOuter := bvNone;
   FButtonPanel.Left := 0;
   FButtonPanel.Top := 0;
@@ -1341,6 +1366,7 @@ var
   LIndex: Integer;
   LLeft, LTop: Integer;
   LItem: TButtonBarCollectionItem;
+  LButtonFound: Boolean;
 begin
   if ACheckDesigning and not (csDesigning in ComponentState) then
     Exit;
@@ -1349,6 +1375,22 @@ begin
   try
     LLeft := 0;
     LTop := 0;
+
+    LButtonFound := False;
+    for LIndex := 0 to FItems.Count - 1 do
+    begin
+      LItem := FItems.Item[LIndex];
+
+      case LItem.Style of
+        stDivider:
+          begin
+            LItem.Visible := LButtonFound and (LIndex <> FItems.Count - 1);
+            LButtonFound := False;
+          end;
+        stButton:
+          LButtonFound := True;
+      end;
+    end;
 
     for LIndex := 0 to FItems.Count - 1 do
     begin
@@ -1464,6 +1506,13 @@ begin
   { Dummy click event for enabling button }
 end;
 
+function TButtonBar.FormatCaption(const ACaption: string): string;
+begin
+  Result := ACaption;
+  Result := StringReplace(Result, '&', '', [rfReplaceAll]);
+  Result := StringReplace(Result, '...', '', [rfReplaceAll]);
+end;
+
 {$IF NOT DEFINED(ALPHASKINS)}
 function TButtonBar.ScaleInt(const ANumber: Integer): Integer;
 begin
@@ -1476,6 +1525,7 @@ var
   LItem: TButtonBarCollectionItem;
   LTextWidth: Integer;
   LNotifyEvent: TNotifyEvent;
+  LCaption: string;
 begin
   if InUpdateBlock then
     Exit;
@@ -1485,18 +1535,25 @@ begin
     LItem := TButtonBarCollectionItem(ASource);
 
     LItem.Button.Action := LItem.Action;
+    LItem.Button.OnClick := LItem.OnClick;
     LItem.Button.AllowAllUp := LItem.AllowAllUp;
     LItem.Button.Cursor := LItem.Cursor;
     LItem.Button.Down := LItem.Down;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
+
     if LItem.Layout = blGlyphLeft then
       LItem.Button.Margin := ScaleInt(3);
+
     LItem.Button.Images := FImages;
+
     if csDesigning in ComponentState then
       LItem.Button.Visible := True
     else
       LItem.Button.Visible := LItem.Visible;
+
+    LItem.Button.Invisible := (csDesigning in ComponentState) and not LItem.Visible;
+
     LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
 
     if opShowHints in FOptions then
@@ -1510,7 +1567,14 @@ begin
     if (LItem.Style = stDivider) or not (opShowCaptions in FOptions) then
       LItem.Button.Caption := ''
     else
-      LItem.Button.Caption := LItem.Caption;
+    begin
+      LCaption := LItem.Caption;
+
+      if opFormatCaptions in FOptions then
+        LCaption := FormatCaption(LCaption);
+
+      LItem.Button.Caption := LCaption;
+    end;
 
     if Orientation = soHorizontal then
       LItem.Button.Align := alLeft
@@ -1640,7 +1704,15 @@ procedure TButtonBar.WMSize(var AMessage: TWMSize);
 begin
   inherited;
 
-  SetButtonPanelSize;
+  if csDesigning in ComponentState then
+  begin
+    if ShowNotItemsFound then
+      Invalidate
+    else
+      UpdateButtons;
+  end
+  else
+    SetButtonPanelSize;
 end;
 
 procedure TButtonBar.PaintWindow(DC: HDC);
@@ -1688,6 +1760,7 @@ begin
 
   FCanvas.Brush.Color := TColors.Red;
   FCanvas.Brush.Style := bsSolid;
+
   FCanvas.Font.Color := TColors.White;
   FCanvas.Font.Quality := fqAntialiased;
   FCanvas.Font.Style := [fsBold];
