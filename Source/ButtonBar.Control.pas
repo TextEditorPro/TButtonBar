@@ -283,12 +283,14 @@ type
     procedure DoDefaultChange(ASender: TObject);
     procedure DoResize(Sender: TObject);
     procedure DummyClickEvent(ASender: TObject);
+    procedure SetButtonPanelSize;
     procedure SetImages(const AValue: TCustomImageList);
     procedure SetItems(const AValue: TButtonBarCollection);
     procedure SetOptions(const AValue: TButtonBarOptions);
     procedure UpdateButtonPositions(const ACheckDesigning: Boolean = False);
     procedure UpdateButtons(const AIsLast: Boolean = False);
     procedure WMPaint(var AMessage: TWMPaint); message WM_PAINT;
+    procedure WMSize(var AMessage: TWMSize); message WM_SIZE;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1420,6 +1422,17 @@ begin
   Result := FItems.UpdateCount > 0;
 end;
 
+procedure TButtonBar.SetButtonPanelSize;
+begin
+  if Assigned(FButtonPanel) then
+  begin
+    if Orientation = soHorizontal then
+      FButtonPanel.Height := Height
+    else
+      FButtonPanel.Width := Width;
+  end;
+end;
+
 procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
@@ -1445,10 +1458,7 @@ begin
     FButtonPanel.Left := 0;
     FButtonPanel.Top := 0;
 
-    if Orientation = soHorizontal then
-      FButtonPanel.Height := Height
-    else
-      FButtonPanel.Width := Width;
+    SetButtonPanelSize;
 
     for LIndex := 0 to FItems.Count - 1 do
       Assign(FItems.Item[LIndex]);
@@ -1492,7 +1502,8 @@ begin
     LItem.Button.Down := LItem.Down;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
-    LItem.Button.Margin := 0;
+    if LItem.Layout = blGlyphLeft then
+      LItem.Button.Margin := ScaleInt(3);
     LItem.Button.Images := FImages;
     if csDesigning in ComponentState then
       LItem.Button.Visible := True
@@ -1635,6 +1646,11 @@ begin
 
   if ShowNotItemsFound then
      ControlState := ControlState - [csCustomPaint];
+end;
+
+procedure TButtonBar.WMSize(var AMessage: TWMSize);
+begin
+  SetButtonPanelSize;
 end;
 
 procedure TButtonBar.PaintWindow(DC: HDC);

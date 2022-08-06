@@ -99,7 +99,7 @@ object MainForm: TMainForm
   object ButtonBar4: TButtonBar
     Left = 0
     Top = 60
-    Width = 95
+    Width = 137
     Height = 341
     Align = alLeft
     Font.Charset = DEFAULT_CHARSET
