@@ -17,6 +17,7 @@ object MainForm: TMainForm
     Top = 0
     Width = 624
     Height = 60
+    ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -9
@@ -62,6 +63,7 @@ object MainForm: TMainForm
     Width = 624
     Height = 40
     Align = alBottom
+    ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -9
@@ -78,6 +80,7 @@ object MainForm: TMainForm
     Width = 40
     Height = 341
     Align = alRight
+    ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -9
@@ -99,9 +102,10 @@ object MainForm: TMainForm
   object ButtonBar4: TButtonBar
     Left = 0
     Top = 60
-    Width = 137
+    Width = 141
     Height = 341
     Align = alLeft
+    ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -9

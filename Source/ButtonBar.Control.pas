@@ -281,7 +281,6 @@ type
     procedure CreateButtonPanel;
     procedure CreateDropdownButton(var AItem: TButtonBarCollectionItem);
     procedure DoDefaultChange(ASender: TObject);
-    procedure DoResize(Sender: TObject);
     procedure DummyClickEvent(ASender: TObject);
     procedure SetButtonPanelSize;
     procedure SetImages(const AValue: TCustomImageList);
@@ -305,7 +304,6 @@ type
     property ItemByName[const AName: string]: TButtonBarCollectionItem read GetItemByName;
   published
     property Align default alTop;
-    property ButtonSize default 16;
     property Canvas: TCanvas read FCanvas;
     property Defaults: TButtonBarDefaults read FDefaults write FDefaults;
     property DoubleBuffered default True;
@@ -445,7 +443,7 @@ begin
       if BiDiMode = bdRightToLeft then
         Inc(LPoint.X, Width);
 
-			if Assigned(FOnBeforeMenuDropdown) then
+      if Assigned(FOnBeforeMenuDropdown) then
         FOnBeforeMenuDropdown(Self);
 
       DropdownMenu.Popup(LPoint.X, LPoint.Y);
@@ -889,7 +887,7 @@ begin
     Self.FStyle := FStyle;
     Self.FTag := FTag;
     Self.FVisible := FVisible;
-		Self.OnClick := OnClick;
+    Self.OnClick := OnClick;
     Self.OnCounterChanged := OnCounterChanged;
 {$IFDEF ALPHASKINS}
     Self.FBlend := FBlend;
@@ -1256,11 +1254,7 @@ constructor TButtonBar.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
-  FCanvas := TControlCanvas.Create;
-  TControlCanvas(FCanvas).Control := Self;
-
   Align := alTop;
-  ButtonSize := 16;
   ControlStyle := [csAcceptsControls, csCaptureMouse, csClickEvents, csGestures];
   DoubleBuffered := True;
   Font.Size := 7;
@@ -1271,11 +1265,9 @@ begin
   ParentFont := False;
 
   FItems := TButtonBarCollection.Create(Self, TButtonBarCollectionItem);
+
   FDefaults := TButtonBarDefaults.Create;
   FDefaults.OnChange := DoDefaultChange;
-
-  if csDesigning in ComponentState then
-    OnResize := DoResize;
 end;
 
 destructor TButtonBar.Destroy;
@@ -1286,7 +1278,8 @@ begin
   if Assigned(FButtonPanel) then
     FreeAndNil(FButtonPanel);
 
-  FreeAndNil(FCanvas);
+  if Assigned(FCanvas) then
+    FreeAndNil(FCanvas);
 
   inherited Destroy;
 end;
@@ -1296,11 +1289,6 @@ begin
   inherited Loaded;
 
   UpdateButtons;
-end;
-
-procedure TButtonBar.DoResize;
-begin
-  Invalidate;
 end;
 
 procedure TButtonBar.CMRecreateWnd(var AMessage: TMessage);
@@ -1424,7 +1412,7 @@ end;
 
 procedure TButtonBar.SetButtonPanelSize;
 begin
-  if Assigned(FButtonPanel) then
+  if Assigned(Parent) and Assigned(FButtonPanel) then
   begin
     if Orientation = soHorizontal then
       FButtonPanel.Height := Height
@@ -1650,6 +1638,8 @@ end;
 
 procedure TButtonBar.WMSize(var AMessage: TWMSize);
 begin
+  inherited;
+
   SetButtonPanelSize;
 end;
 
@@ -1657,6 +1647,12 @@ procedure TButtonBar.PaintWindow(DC: HDC);
 begin
   if ShowNotItemsFound then
   begin
+    if not Assigned(FCanvas) then
+    begin
+      FCanvas := TControlCanvas.Create;
+      TControlCanvas(FCanvas).Control := Self;
+    end;
+
     FCanvas.Lock;
     try
       FCanvas.Handle := DC;
