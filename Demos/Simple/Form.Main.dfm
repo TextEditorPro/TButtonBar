@@ -99,7 +99,7 @@ object MainForm: TMainForm
   object ButtonBar4: TButtonBar
     Left = 0
     Top = 60
-    Width = 40
+    Width = 95
     Height = 341
     Align = alLeft
     Font.Charset = DEFAULT_CHARSET
@@ -109,7 +109,24 @@ object MainForm: TMainForm
     Font.Style = []
     Orientation = soVertical
     TabOrder = 3
-    Items = <>
+    Images = ImageList
+    Items = <
+      item
+        Caption = 'Test 1'
+        ImageIndex = 2
+        Layout = blGlyphLeft
+      end
+      item
+        Caption = 'Test  2 - longer text'
+        ImageIndex = 1
+        Layout = blGlyphLeft
+      end
+      item
+        Caption = 'Test 3'
+        ImageIndex = 0
+        Layout = blGlyphLeft
+      end>
+    Options = [opShowCaptions]
   end
   object ImageList: TImageList
     ColorDepth = cd32Bit
