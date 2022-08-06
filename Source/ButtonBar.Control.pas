@@ -1676,6 +1676,9 @@ var
   LTextHeight, LTextWidth: Integer;
   LFlags: Cardinal;
 begin
+  if not ShowNotItemsFound then
+    Exit;
+
   LRect := ClientRect;
 
   FCanvas.Brush.Color := TColors.Red;
