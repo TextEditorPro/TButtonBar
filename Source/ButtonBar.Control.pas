@@ -1446,9 +1446,9 @@ begin
     FButtonPanel.Top := 0;
 
     if Orientation = soHorizontal then
-      FButtonPanel.Height := Height // ScaleInt(FDefaults.ButtonSize)
+      FButtonPanel.Height := Height
     else
-      FButtonPanel.Width := Width; ScaleInt(FDefaults.ButtonSize);
+      FButtonPanel.Width := Width;
 
     for LIndex := 0 to FItems.Count - 1 do
       Assign(FItems.Item[LIndex]);
