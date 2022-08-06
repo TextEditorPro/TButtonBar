@@ -55,6 +55,7 @@ type
     FCounter: TButtonBarItemCounter;
     FDropdownMenu: TPopupMenu;
     FDropdownButtonVisible: Boolean;
+    FOnBeforeMenuDropdown: TNotifyEvent;
     FSkipDropdown: Boolean;
     FStyle: TButtonBarControlStyle;
     function IsMouseOverControl: Boolean;
@@ -78,6 +79,7 @@ type
     property Counter: TButtonBarItemCounter read FCounter write FCounter;
     property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
     property DropdownButtonVisible: Boolean read FDropdownButtonVisible write FDropdownButtonVisible;
+    property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
     property Style: TButtonBarControlStyle read FStyle write SetStyle default csButton;
   end;
 
@@ -170,6 +172,7 @@ type
     FOnClick: TNotifyEvent;
     FOnCounterChanged: TSTCounterChangedEvent;
     FStyle: TButtonBarItemStyle;
+    FTag: Integer;
     FVisible: Boolean;
 {$IFDEF ALPHASKINS}
     FBlend: Integer;
@@ -204,7 +207,7 @@ type
   protected
     function GetDisplayName: string; override;
     function GetActionLinkClass: TButtonBarItemActionLinkClass;
-    procedure ActionChanged(Sender: TObject; const ACheckDefaults: Boolean); dynamic;
+    procedure ActionChange(Sender: TObject; const ACheckDefaults: Boolean); dynamic;
     procedure SetIndex(AValue: Integer); override;
     property ActionLink: TButtonBarItemActionLink read FActionLink write FActionLink;
   public
@@ -232,6 +235,7 @@ type
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
     property OnCounterChanged: TSTCounterChangedEvent read FOnCounterChanged write FOnCounterChanged;
     property Style: TButtonBarItemStyle read FStyle write SetStyle default stButton;
+    property Tag: Integer read FTag write FTag default 0;
     property Visible: Boolean read FVisible write SetVisible default True;
 {$IFDEF ALPHASKINS}
     property Blend: Integer read FBlend write SetBlend default 0;
@@ -263,7 +267,9 @@ type
     FDefaults: TButtonBarDefaults;
     FImages: TCustomImageList;
     FItems: TButtonBarCollection;
+    FOnBeforeMenuDropdown: TNotifyEvent;
     FOptions: TButtonBarOptions;
+    function GetControlByName(const AName: string): TControl;
     function GetItem(const AIndex: Integer): TButtonBarCollectionItem;
     function GetItemByName(const AName: string): TButtonBarCollectionItem;
     function InUpdateBlock: Boolean;
@@ -287,19 +293,23 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Assign(ASource: TPersistent); override;
+    procedure Clear;
     procedure CreateButton(var AItem: TButtonBarCollectionItem);
     procedure Loaded; override;
     procedure Paint; {$IFDEF ALPHASKINS}override;{$ELSE}virtual;{$ENDIF}
     procedure PaintWindow(DC: HDC); override;
+    property ControlByName[const AName: string]: TControl read GetControlByName;
     property Item[const AIndex: Integer]: TButtonBarCollectionItem read GetItem;
     property ItemByName[const AName: string]: TButtonBarCollectionItem read GetItemByName;
   published
     property Align default alTop;
+    property ButtonSize default 16;
     property Canvas: TCanvas read FCanvas;
     property Defaults: TButtonBarDefaults read FDefaults write FDefaults;
     property DoubleBuffered default True;
     property Images: TCustomImageList read FImages write SetImages;
     property Items: TButtonBarCollection read FItems write SetItems;
+    property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
     property Options: TButtonBarOptions read FOptions write SetOptions default [];
     property ParentBackground default True;
     property ParentDoubleBuffered default False;
@@ -433,6 +443,9 @@ begin
       if BiDiMode = bdRightToLeft then
         Inc(LPoint.X, Width);
 
+			if Assigned(FOnBeforeMenuDropdown) then
+        FOnBeforeMenuDropdown(Self);
+
       DropdownMenu.Popup(LPoint.X, LPoint.Y);
 
 {$IFDEF ALPHASKINS}
@@ -548,7 +561,7 @@ end;
 function TButtonBarItemActionLink.IsCaptionLinked: Boolean;
 begin
   Result := inherited IsCaptionLinked and (Action is TCustomAction) and
-    (FClient.Caption = TCustomAction(Action).Caption);
+    SameCaption(FClient.Caption, TCustomAction(Action).Caption);
 end;
 
 function TButtonBarItemActionLink.IsEnabledLinked: Boolean;
@@ -565,7 +578,8 @@ end;
 
 function TButtonBarItemActionLink.IsHintLinked: Boolean;
 begin
-  Result := inherited IsHintLinked and (Action is TCustomAction) and (FClient.Hint = TCustomAction(Action).Hint);
+  Result := inherited IsHintLinked and (Action is TCustomAction) and
+    (FClient.Hint = TCustomAction(Action).Hint);
 end;
 
 function TButtonBarItemActionLink.IsImageIndexLinked: Boolean;
@@ -823,6 +837,7 @@ begin
   FImageIndex := -1;
   FLayout := blGlyphTop;
   FStyle := stButton;
+  FTag := 0;
   FVisible := True;
 {$IFDEF ALPHASKINS}
   FBlend := 0;
@@ -855,6 +870,7 @@ begin
   if ASource is TButtonBarCollectionItem then
   with ASource as TButtonBarCollectionItem do
   begin
+    Self.Action := Action;
     Self.FAllowAllUp := FAllowAllUp;
     Self.FCaption := FCaption;
     Self.FCounter.Assign(FCounter);
@@ -869,7 +885,10 @@ begin
     Self.FLayout := FLayout;
     Self.FName := FName;
     Self.FStyle := FStyle;
+    Self.FTag := FTag;
     Self.FVisible := FVisible;
+		Self.OnClick := OnClick;
+    Self.OnCounterChanged := OnCounterChanged;
 {$IFDEF ALPHASKINS}
     Self.FBlend := FBlend;
     Self.FDisabledGlyphKind := FDisabledGlyphKind;
@@ -898,7 +917,7 @@ begin
     FActionLink.Action := AValue;
     FActionLink.OnChange := DoActionChange;
 
-    ActionChanged(AValue, csLoading in AValue.ComponentState);
+    ActionChange(AValue, csLoading in AValue.ComponentState);
   end;
 
   Changed(False);
@@ -1091,7 +1110,7 @@ begin
   LButtonBar.UpdateButtonPositions(True);
 end;
 
-procedure TButtonBarCollectionItem.ActionChanged(Sender: TObject; const ACheckDefaults: Boolean);
+procedure TButtonBarCollectionItem.ActionChange(Sender: TObject; const ACheckDefaults: Boolean);
 begin
   if Sender is TCustomAction then
   with TCustomAction(Sender) do
@@ -1119,11 +1138,7 @@ begin
 
     if not ACheckDefaults or not Assigned(@Self.OnClick) then
       Self.OnClick := OnExecute;
-
-    Changed(False);
   end;
-
-  UpdateButton;
 end;
 
 procedure TButtonBarCollectionItem.SetIndex(AValue: Integer);
@@ -1156,7 +1171,7 @@ end;
 procedure TButtonBarCollectionItem.DoActionChange(Sender: TObject);
 begin
   if Sender = Action then
-    ActionChanged(Sender, False);
+    ActionChange(Sender, False);
 end;
 
 procedure TButtonBarCollectionItem.SetName(const AValue: string);
@@ -1243,6 +1258,7 @@ begin
   TControlCanvas(FCanvas).Control := Self;
 
   Align := alTop;
+  ButtonSize := 16;
   ControlStyle := [csAcceptsControls, csCaptureMouse, csClickEvents, csGestures];
   DoubleBuffered := True;
   Font.Size := 7;
@@ -1273,9 +1289,6 @@ begin
   inherited Destroy;
 end;
 
-{ Warning: Loaded may be called multiple times on inherited forms. It is called every time a level of inheritance is
-  streamed in. Do not allocate memory in an overridden Loaded method without first checking that the memory has not
-  been allocated in a previous call. }
 procedure TButtonBar.Loaded;
 begin
   inherited Loaded;
@@ -1305,6 +1318,11 @@ begin
   FButtonPanel.Parent := Self;
 
   Control := FButtonPanel;
+end;
+
+procedure TButtonBar.Clear;
+begin
+  FItems.Clear;
 end;
 
 procedure TButtonBar.CreateButton(var AItem: TButtonBarCollectionItem);
@@ -1428,9 +1446,9 @@ begin
     FButtonPanel.Top := 0;
 
     if Orientation = soHorizontal then
-      FButtonPanel.Height := ScaleInt(FDefaults.ButtonSize)
+      FButtonPanel.Height := Height // ScaleInt(FDefaults.ButtonSize)
     else
-      FButtonPanel.Width := ScaleInt(FDefaults.ButtonSize);
+      FButtonPanel.Width := Width; ScaleInt(FDefaults.ButtonSize);
 
     for LIndex := 0 to FItems.Count - 1 do
       Assign(FItems.Item[LIndex]);
@@ -1474,8 +1492,13 @@ begin
     LItem.Button.Down := LItem.Down;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
+    LItem.Button.Margin := 0;
     LItem.Button.Images := FImages;
-    LItem.Button.Visible := LItem.Visible;
+    if csDesigning in ComponentState then
+      LItem.Button.Visible := True
+    else
+      LItem.Button.Visible := LItem.Visible;
+    LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
 
     if opShowHints in FOptions then
       LItem.Button.Hint := LItem.Hint
@@ -1699,6 +1722,14 @@ end;
 procedure TButtonBar.DoDefaultChange(ASender: TObject);
 begin
   UpdateButtons;
+end;
+
+function TButtonBar.GetControlByName(const AName: string): TControl;
+var
+  LItem: TButtonBarCollectionItem;
+begin
+  LItem := GetItemByName(AName);
+  Result := LItem.Button;
 end;
 
 function TButtonBar.GetItem(const AIndex: Integer): TButtonBarCollectionItem;
