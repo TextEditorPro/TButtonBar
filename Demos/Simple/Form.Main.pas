@@ -22,9 +22,12 @@ type
     MenuItemPopupMenuDemo4: TMenuItem;
     PopupMenuDemo2: TPopupMenu;
     PopupMenuDemo4: TPopupMenu;
+    ActionTest5: TAction;
     procedure ActionDemo2Execute(Sender: TObject);
     procedure ActionDemo2PopupExecute(Sender: TObject);
     procedure ActionDemo4PopupExecute(Sender: TObject);
+    procedure ButtonBar1Items2Click(Sender: TObject);
+    procedure ActionTest5Execute(Sender: TObject);
   end;
 
 var
@@ -47,6 +50,23 @@ end;
 procedure TMainForm.ActionDemo4PopupExecute(Sender: TObject);
 begin
   ShowMessage('Demo 4 only popup click');
+end;
+
+procedure TMainForm.ActionTest5Execute(Sender: TObject);
+begin
+  ActionTest5.Visible := False;
+end;
+
+procedure TMainForm.ButtonBar1Items2Click(Sender: TObject);
+var
+  LItem: TButtonBarCollectionItem;
+  LValue: Integer;
+begin
+  LItem := ButtonBar1.ItemByName['Demo3'];
+  LValue := LItem.Counter.Value;
+  Dec(LValue);
+  if LValue >= 0 then
+    LItem.Counter.Value := LValue;
 end;
 
 end.

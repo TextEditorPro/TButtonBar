@@ -2,7 +2,7 @@ object MainForm: TMainForm
   Left = 0
   Top = 0
   Caption = 'TButtonBar Demo'
-  ClientHeight = 447
+  ClientHeight = 417
   ClientWidth = 629
   Color = clWindow
   DoubleBuffered = True
@@ -34,6 +34,9 @@ object MainForm: TMainForm
         Name = 'Demo1'
       end
       item
+        Style = stDivider
+      end
+      item
         Action = ActionDemo2
         Caption = 'Demo2'
         Dropdown.PopupMenu = PopupMenuDemo2
@@ -43,25 +46,28 @@ object MainForm: TMainForm
         OnClick = ActionDemo2Execute
       end
       item
+        Caption = 'Demo4'
+        Dropdown.PopupMenu = PopupMenuDemo4
+        Dropdown.Visible = True
+        ImageIndex = 1
+        Name = 'Demo4'
+      end
+      item
+        Style = stDivider
+      end
+      item
         Caption = 'Demo 3'
         Counter.Value = 99
         Counter.Visible = True
         ImageIndex = 2
         Name = 'Demo3'
         OnClick = ButtonBar1Items2Click
-      end
-      item
-        Caption = 'Demo4'
-        Dropdown.PopupMenu = PopupMenuDemo4
-        Dropdown.Visible = True
-        ImageIndex = 1
-        Name = 'Demo4'
       end>
     Options = [opShowCaptions, opShowHints]
   end
   object ButtonBar2: TButtonBar
     Left = 0
-    Top = 392
+    Top = 362
     Width = 629
     Height = 55
     Align = alBottom
@@ -80,7 +86,7 @@ object MainForm: TMainForm
     Left = 589
     Top = 60
     Width = 40
-    Height = 332
+    Height = 302
     Align = alRight
     ButtonSize = 16
     Font.Charset = DEFAULT_CHARSET
@@ -105,7 +111,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 60
     Width = 203
-    Height = 332
+    Height = 302
     Align = alLeft
     ButtonSize = 16
     Orientation = soVertical
@@ -131,14 +137,14 @@ object MainForm: TMainForm
       end
       item
         Style = stDivider
-      end
-      item
-        Style = stDivider
         Visible = False
       end
       item
         Style = stDivider
         Visible = False
+      end
+      item
+        Style = stDivider
       end
       item
         Caption = 'Test 4 - Auto remove dividers'
@@ -149,15 +155,18 @@ object MainForm: TMainForm
         Style = stDivider
       end
       item
+        Action = ActionTest5
         Caption = 'Test 5 - &Formatted caption...'
-        ImageIndex = 1
+        ImageIndex = 0
         Layout = blGlyphLeft
+        Name = 'Test5'
+        OnClick = ActionTest5Execute
       end
       item
         Style = stDivider
         Visible = False
       end>
-    Options = [opShowCaptions, opFormatCaptions]
+    Options = [opFormatCaptions, opShowCaptions]
   end
   object ImageList: TImageList
     ColorDepth = cd32Bit
@@ -723,6 +732,11 @@ object MainForm: TMainForm
     object ActionDemo4Popup: TAction
       Caption = 'Demo4 Popup'
       OnExecute = ActionDemo4PopupExecute
+    end
+    object ActionTest5: TAction
+      Caption = 'Test 5 - &Formatted caption...'
+      ImageIndex = 0
+      OnExecute = ActionTest5Execute
     end
   end
   object PopupMenuDemo4: TPopupMenu

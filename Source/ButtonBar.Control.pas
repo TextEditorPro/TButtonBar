@@ -1,7 +1,5 @@
 ﻿unit ButtonBar.Control;
 
-// TODO: AutoSize
-
 interface
 
 uses
@@ -202,7 +200,7 @@ type
     procedure SetStyle(const AValue: TButtonBarItemStyle);
     procedure SetVisible(const AValue: Boolean);
     procedure UpdateButton;
-    procedure UpdateButtonPositions;
+    procedure UpdateButtonPositions(const ACheckDesigning: Boolean = True);
 {$IFDEF ALPHASKINS}
     procedure SetBlend(const AValue: Integer);
     procedure SetDisabledGlyphKind(const AValue: TsDisabledGlyphKind);
@@ -261,7 +259,7 @@ type
   end;
 
   TButtonBarPosition = (poHorizontal, poVertical);
-  TButtonBarOption = (opShowCaptions, opFormatCaptions, opShowHints);
+  TButtonBarOption = (opFormatCaptions, opShowCaptions, opShowHints);
   TButtonBarOptions = set of TButtonBarOption;
 
   TButtonBar = class(TButtonBarPageScroller)
@@ -1103,6 +1101,9 @@ begin
 
     if Assigned(FDropdownButton) then
       FDropdownButton.Visible := FDropdown.Visible and AValue;
+
+    if Style = stButton then
+      UpdateButtonPositions(False);
   end;
 end;
 
@@ -1126,12 +1127,12 @@ begin
     FButton.Invalidate;
 end;
 
-procedure TButtonBarCollectionItem.UpdateButtonPositions;
+procedure TButtonBarCollectionItem.UpdateButtonPositions(const ACheckDesigning: Boolean = True);
 var
   LButtonBar: TButtonBar;
 begin
   LButtonBar := TButtonBar(Collection.Owner);
-  LButtonBar.UpdateButtonPositions(True);
+  LButtonBar.UpdateButtonPositions(ACheckDesigning);
 end;
 
 procedure TButtonBarCollectionItem.ActionChange(Sender: TObject; const ACheckDefaults: Boolean);
@@ -1384,11 +1385,29 @@ begin
       case LItem.Style of
         stDivider:
           begin
-            LItem.Visible := LButtonFound and (LIndex <> FItems.Count - 1);
+            LItem.Visible := LButtonFound;
             LButtonFound := False;
           end;
         stButton:
-          LButtonFound := True;
+          if LItem.Visible then
+            LButtonFound := True;
+      end;
+    end;
+
+    LButtonFound := False;
+    for LIndex := FItems.Count - 1 downto 0 do
+    begin
+      LItem := FItems.Item[LIndex];
+
+      case LItem.Style of
+        stDivider:
+          begin
+            LItem.Visible := LButtonFound;
+            LButtonFound := False;
+          end;
+        stButton:
+          if LItem.Visible then
+            LButtonFound := True;
       end;
     end;
 
