@@ -505,6 +505,8 @@ begin
         begin
           inherited;
 
+        if Assigned(FDropdownMenu) and FDropdownButtonVisible then
+        begin
           with ClientRect do
           begin
             LLeft := Left + (Width - FArrowBmp.Width) div 2 + 1;
@@ -513,6 +515,7 @@ begin
 
           LCanvas.Draw(LLeft, LTop, FArrowBmp);
         end;
+      end
     else
       inherited;
 
@@ -1190,7 +1193,7 @@ end;
 procedure TButtonBarCollectionItem.DoDropdownChange(Sender: TObject);
 begin
   UpdateButton;
-  UpdateButtonPositions;
+  UpdateButtonPositions(False);
 end;
 
 procedure TButtonBarCollectionItem.DoActionChange(Sender: TObject);
@@ -1270,7 +1273,8 @@ procedure TButtonBarCollection.EndUpdate;
 begin
   inherited EndUpdate;
 
-  TButtonBar(Owner).UpdateButtons;
+  if ([csLoading, csDestroying] * TButtonBar(Owner).ComponentState) = [] then
+    TButtonBar(Owner).UpdateButtons;
 end;
 
 { TButtonBar }
@@ -1394,20 +1398,16 @@ begin
       end;
     end;
 
-    LButtonFound := False;
     for LIndex := FItems.Count - 1 downto 0 do
     begin
       LItem := FItems.Item[LIndex];
 
       case LItem.Style of
         stDivider:
-          begin
-            LItem.Visible := LButtonFound;
-            LButtonFound := False;
-          end;
+          LItem.Visible := False;
         stButton:
           if LItem.Visible then
-            LButtonFound := True;
+            Break;
       end;
     end;
 
@@ -1639,7 +1639,7 @@ begin
       LNotifyEvent := DummyClickEvent;
 
       if LItem.Visible and LItem.Dropdown.Visible and Assigned(LItem.Dropdown.PopupMenu) and
-        Assigned(LItem.Button.OnClick) and (@LItem.Action.OnExecute <> @LNotifyEvent) then
+        Assigned(LItem.Button.OnClick) and Assigned(LItem.Action) and (@LItem.Action.OnExecute <> @LNotifyEvent) then
         CreateDropdownButton(LItem)
       else
       if Assigned(LItem.DropdownButton) then
@@ -1649,7 +1649,7 @@ begin
         Assigned(LItem.Dropdown.PopupMenu) and Assigned(LItem.Action) and not Assigned(LItem.Action.OnExecute) then
         LItem.Action.OnExecute := DummyClickEvent; { Action is disabled without execute event. }
 
-      LItem.Button.DropdownButtonVisible := not Assigned(LItem.DropdownButton);
+      LItem.Button.DropdownButtonVisible := LItem.Dropdown.Visible and not Assigned(LItem.DropdownButton);
 
       if Assigned(LItem.DropdownButton) then
       begin
