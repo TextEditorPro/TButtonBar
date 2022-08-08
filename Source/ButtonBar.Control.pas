@@ -944,8 +944,6 @@ begin
 
     ActionChange(AValue, csLoading in AValue.ComponentState);
   end;
-
-  Changed(False);
 end;
 
 function TButtonBarCollectionItem.CanUpdateButton: Boolean;
