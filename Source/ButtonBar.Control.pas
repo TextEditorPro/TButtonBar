@@ -56,6 +56,7 @@ type
     FDropdownMenu: TPopupMenu;
     FDropdownButtonVisible: Boolean;
     FInvisible: Boolean;
+    FMainControl: TButtonBarControl;
     FOnBeforeMenuDropdown: TNotifyEvent;
     FSkipDropdown: Boolean;
     FStyle: TButtonBarControlStyle;
@@ -81,6 +82,7 @@ type
     property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
     property DropdownButtonVisible: Boolean read FDropdownButtonVisible write FDropdownButtonVisible;
     property Invisible: Boolean read FInvisible write FInvisible default False;
+    property MainControl: TButtonBarControl read FMainControl write FMainControl;
     property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
     property Style: TButtonBarControlStyle read FStyle write SetStyle default csButton;
   end;
@@ -266,6 +268,9 @@ type
   private
     FButtonPanel: TButtonBarPanel;
     FCanvas: TCanvas;
+{$IF CompilerVersion < 35}
+    FDrawLockCount: Cardinal;
+{$ENDIF}
     FDefaults: TButtonBarDefaults;
     FImages: TCustomImageList;
     FItems: TButtonBarCollection;
@@ -284,10 +289,12 @@ type
     procedure CreateDropdownButton(var AItem: TButtonBarCollectionItem);
     procedure DoDefaultChange(ASender: TObject);
     procedure DummyClickEvent(ASender: TObject);
+    procedure LockPainting;
     procedure SetButtonPanelSize;
     procedure SetImages(const AValue: TCustomImageList);
     procedure SetItems(const AValue: TButtonBarCollection);
     procedure SetOptions(const AValue: TButtonBarOptions);
+    procedure UnlockPainting;
     procedure UpdateButtonPositions(const ACheckDesigning: Boolean = False);
     procedure UpdateButtons(const AIsLast: Boolean = False);
     procedure WMPaint(var AMessage: TWMPaint); message WM_PAINT;
@@ -428,6 +435,7 @@ procedure TButtonBarControl.MouseDown(AButton: TMouseButton; AShift: TShiftState
 var
   LPoint: TPoint;
   LPanel: TButtonBarPanel;
+  LControl: TButtonBarControl;
 begin
   if csDesigning in ComponentState then
     Exit;
@@ -444,9 +452,12 @@ begin
 
       DropdownMenu.PopupComponent := Self;
 
-      LPoint := ClientToScreen(Point(0, Height));
-      if BiDiMode = bdRightToLeft then
-        Inc(LPoint.X, Width);
+      if Assigned(FMainControl) then
+        LControl := FMainControl
+      else
+        LControl := Self;
+
+      LPoint := LControl.ClientToScreen(Point(0, LControl.Height));
 
       if Assigned(FOnBeforeMenuDropdown) then
         FOnBeforeMenuDropdown(Self);
@@ -1364,6 +1375,34 @@ begin
   AItem.DropdownButton.Parent := FButtonPanel;
 end;
 
+procedure TButtonBar.LockPainting;
+begin
+{$IF CompilerVersion < 35}
+  if (FDrawLockCount = 0) and HandleAllocated and Visible then
+    SendMessage(WindowHandle, WM_SETREDRAW, Ord(False), 0);
+  Inc(FDrawLockCount);
+{$ELSE}
+  LockDrawing;
+{$ENDIF}
+end;
+
+procedure TButtonBar.UnlockPainting;
+begin
+{$IF CompilerVersion < 35}
+  if FDrawLockCount > 0 then
+  begin
+    Dec(FDrawLockCount);
+    if (FDrawLockCount = 0) and HandleAllocated and Visible then
+    begin
+      SendMessage(WindowHandle, WM_SETREDRAW, Ord(True), 0);
+      RedrawWindow(WindowHandle, nil, 0, RDW_ERASE or RDW_FRAME or RDW_INVALIDATE or RDW_ALLCHILDREN);
+    end;
+  end;
+{$ELSE}
+  UnlockDrawing;
+{$ENDIF}
+end;
+
 procedure TButtonBar.UpdateButtonPositions(const ACheckDesigning: Boolean = False);
 var
   LIndex: Integer;
@@ -1374,7 +1413,7 @@ begin
   if ACheckDesigning and not (csDesigning in ComponentState) then
     Exit;
 
-  LockDrawing;
+  LockPainting;
   try
     LLeft := 0;
     LTop := 0;
@@ -1460,7 +1499,7 @@ begin
       end;
     end;
   finally
-    UnlockDrawing;
+    UnlockPainting;
   end;
 end;
 
@@ -1483,6 +1522,7 @@ end;
 procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
+  LVisible: Boolean;
 begin
   if not Assigned(FButtonPanel) or not (([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
     Exit;
@@ -1499,7 +1539,7 @@ begin
     Exit;
   end;
 
-  LockDrawing;
+  LockPainting;
   try
     FButtonPanel.AutoSize := False;
     FButtonPanel.Left := 0;
@@ -1513,8 +1553,18 @@ begin
     UpdateButtonPositions;
 
     FButtonPanel.AutoSize := True;
+
+    LVisible := False;
+    for LIndex := 0 to FItems.Count - 1 do
+    if FItems.Item[LIndex].Visible then
+    begin
+      LVisible := True;
+      Break;
+    end;
+
+    Visible := LVisible;
   finally
-    UnlockDrawing;
+    UnlockPainting;
   end;
 end;
 
@@ -1664,6 +1714,7 @@ begin
         LItem.DropdownButton.Width := ScaleInt(LItem.Dropdown.ButtonWidth);
         LItem.DropdownButton.Hint := LItem.Dropdown.Hint;
         LItem.DropdownButton.Visible := LItem.Dropdown.Visible and LItem.Visible;
+				LItem.DropdownButton.MainControl := LItem.Button;
 {$IFDEF ALPHASKINS}
         LItem.DropdownButton.ButtonStyle := tbsDropDown;
         LItem.DropdownButton.SplitterStyle := dsLine;
@@ -1682,16 +1733,18 @@ begin
       begin
         LItem.Button.Width := ScaleInt(FDefaults.ButtonSize);
 
+        if LItem.Button.DropdownButtonVisible and Assigned(LItem.Dropdown.PopupMenu) then
+          LItem.Button.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
+
         if opShowCaptions in FOptions then
         begin
+          LItem.Button.Canvas.Font.Assign(Font);
           LItem.Button.Canvas.Font.Size := Font.Size;
           LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(6); { 6 = 3 x 2 Margin }
+
           if LTextWidth > LItem.Button.Width then
             LItem.Button.Width := LTextWidth;
         end;
-
-        if LItem.Button.DropdownButtonVisible and Assigned(LItem.Button.DropdownMenu) then
-          LItem.Button.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
       end
       else
         LItem.Button.Height := ScaleInt(FDefaults.ButtonSize);
