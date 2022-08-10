@@ -1522,7 +1522,6 @@ end;
 procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
-  LVisible: Boolean;
 begin
   if not Assigned(FButtonPanel) or not (([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
     Exit;
@@ -1553,16 +1552,6 @@ begin
     UpdateButtonPositions;
 
     FButtonPanel.AutoSize := True;
-
-    LVisible := False;
-    for LIndex := 0 to FItems.Count - 1 do
-    if FItems.Item[LIndex].Visible then
-    begin
-      LVisible := True;
-      Break;
-    end;
-
-    Visible := LVisible;
   finally
     UnlockPainting;
   end;
