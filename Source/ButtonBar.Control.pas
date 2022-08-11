@@ -50,7 +50,6 @@ type
 
   TButtonBarControl = class(TButtonBarSpeedButton)
   private
-    FArrowBmp: TBitmap;
     FArrowColor: TColor;
     FCounter: TButtonBarItemCounter;
     FDropdownMenu: TPopupMenu;
@@ -64,8 +63,6 @@ type
 {$IF NOT DEFINED(ALPHASKINS)}
     function ScaleInt(const ANumber: Integer): Integer; inline;
 {$ENDIF}
-    procedure CreateArrowBmp;
-    procedure PaintArrowBmp;
     procedure SetArrowColor(const AValue: TColor);
     procedure SetDropdownMenu(const AValue: TPopupMenu);
     procedure SetStyle(const AValue: TButtonBarControlStyle);
@@ -276,6 +273,10 @@ type
     FItems: TButtonBarCollection;
     FOnBeforeMenuDropdown: TNotifyEvent;
     FOptions: TButtonBarOptions;
+{$IFDEF ALPHASKINS}
+    class constructor Create;
+    class destructor Destroy;
+{$ENDIF}
     function GetControlByName(const AName: string): TControl;
     function GetItem(const AIndex: Integer): TButtonBarCollectionItem;
     function GetItemByName(const AName: string): TButtonBarCollectionItem;
@@ -330,7 +331,7 @@ type
 implementation
 
 uses
-  System.RTLConsts;
+  System.RTLConsts, Vcl.Themes;
 
 type
   ESTButtonBarException = class(Exception);
@@ -358,9 +359,6 @@ begin
   DisabledGlyphKind := [];
   WordWrap := False;
 {$ENDIF}
-
-  CreateArrowBmp;
-  PaintArrowBmp;
 end;
 
 {$IF NOT DEFINED(ALPHASKINS)}
@@ -372,35 +370,9 @@ end;
 
 destructor TButtonBarControl.Destroy;
 begin
-  FreeAndNil(FArrowBmp);
   FreeAndNil(FCounter);
 
   inherited Destroy;
-end;
-
-procedure TButtonBarControl.CreateArrowBmp;
-begin
-  FArrowBmp := Vcl.Graphics.TBitmap.Create;
-  FArrowBmp.Transparent := True;
-  FArrowBmp.TransparentColor := Color;
-  FArrowBmp.Width := ScaleInt(7);
-  FArrowBmp.Height := ScaleInt(4);
-  FArrowBmp.Canvas.Brush.Color := Color;
-end;
-
-procedure TButtonBarControl.PaintArrowBmp;
-var
-  LArrowPoints: array [0..2] of TPoint;
-begin
-  FArrowBmp.Canvas.FillRect(Rect(0, 0, FArrowBmp.Width, FArrowBmp.Height));
-
-  LArrowPoints[0] := Point(0, 0);
-  LArrowPoints[1] := Point(FArrowBmp.Width - 1, 0); // -1 because zero origin
-  LArrowPoints[2] := Point((FArrowBmp.Width - 1) div 2, FArrowBmp.Height - 1);
-
-  FArrowBmp.Canvas.Pen.Color := FArrowColor;
-  FArrowBmp.Canvas.Brush.Color := FArrowColor;
-  FArrowBmp.Canvas.Polygon(LArrowPoints);
 end;
 
 procedure TButtonBarControl.SetArrowColor(const AValue: TColor);
@@ -409,7 +381,7 @@ begin
   begin
     FArrowColor := AValue;
 
-    PaintArrowBmp;
+    Repaint;
   end;
 end;
 
@@ -486,6 +458,23 @@ var
   LLeft, LTop: Integer;
   LRect: TRect;
   LCanvas: TCanvas;
+  LArrowHeight: Integer;
+  LArrowWidth: Integer;
+
+  procedure DrawArrow(const X, Y: Integer);
+  var
+    LArrowPoints: array [0..2] of TPoint;
+  begin
+    LArrowPoints[0] := Point(X, Y);
+    LArrowPoints[1] := Point(X + LArrowWidth - 1, Y); // -1 because zero origin
+    LArrowPoints[2] := Point(X + (LArrowWidth - 1) div 2, Y + LArrowHeight - 1);
+
+    LCanvas.Pen.Color := FArrowColor;
+    LCanvas.Brush.Color := FArrowColor;
+    LCanvas.Brush.Style := bsSolid;
+    LCanvas.Polygon(LArrowPoints);
+  end;
+
 begin
   LCanvas := TCanvas.Create;
   try
@@ -518,13 +507,16 @@ begin
 
         if Assigned(FDropdownMenu) and FDropdownButtonVisible then
         begin
-          with ClientRect do
-          begin
-            LLeft := Left + (Width - FArrowBmp.Width) div 2 + 1;
-            LTop := Top + (Height - FArrowBmp.Height) div 2;
-          end;
+            LArrowHeight := ScaleInt(4);
+            LArrowWidth := ScaleInt(7);
 
-          LCanvas.Draw(LLeft, LTop, FArrowBmp);
+            with ClientRect do
+            begin
+              LLeft := Left + (Width - LArrowWidth) div 2 + 1;
+              LTop := Top + (Height - LArrowHeight) div 2;
+            end;
+
+            DrawArrow(LLeft, LTop);
         end;
       end
     else
@@ -532,7 +524,7 @@ begin
 
       if FCounter.Visible then
       begin
-        LCanvas.Font.Size := ScaleInt(FCounter.FontSize);
+        LCanvas.Font.Size := FCounter.FontSize;
         LCanvas.Brush.Style := bsClear;
 
         if not Enabled then
@@ -556,6 +548,9 @@ begin
 
       if Assigned(FDropdownMenu) and FDropdownButtonVisible then
       begin
+        LArrowHeight := ScaleInt(4);
+        LArrowWidth := ScaleInt(7);
+
         with ClientRect do
         begin
           if UseRightToLeftAlignment then
@@ -563,10 +558,10 @@ begin
            else
              LLeft := Right - ScaleInt(12);
 
-          LTop := Top + (Height - FArrowBmp.Height) div 2;
+          LTop := Top + (Height - LArrowHeight) div 2;
         end;
 
-        LCanvas.Draw(LLeft, LTop, FArrowBmp);
+        DrawArrow(LLeft, LTop);
       end;
     end;
   finally
@@ -834,6 +829,7 @@ begin
   begin
     Self.FButtonWidth := FButtonWidth;
     Self.FHint := FHint;
+    Self.FPopupMenu := FPopupMenu;
     Self.FVisible := FVisible;
     Self.DoChange(Self);
   end
@@ -1288,6 +1284,18 @@ end;
 
 { TButtonBar }
 
+{$IFDEF ALPHASKINS}
+class constructor TButtonBar.Create;
+begin
+  { No need for TPageScrollerStyleHook }
+end;
+
+class destructor TButtonBar.Destroy;
+begin
+  { No need for TPageScrollerStyleHook }
+end;
+{$ENDIF}
+
 constructor TButtonBar.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
@@ -1298,6 +1306,7 @@ begin
   Font.Size := 7;
   FOptions := [];
   Height := 40;
+  ParentColor := True;
   ParentBackground := True;
   ParentDoubleBuffered := False;
   ParentFont := False;
@@ -1306,6 +1315,9 @@ begin
 
   FDefaults := TButtonBarDefaults.Create;
   FDefaults.OnChange := DoDefaultChange;
+
+  FCanvas := TControlCanvas.Create;
+  TControlCanvas(FCanvas).Control := Self;
 end;
 
 destructor TButtonBar.Destroy;
@@ -1316,8 +1328,7 @@ begin
   if Assigned(FButtonPanel) then
     FreeAndNil(FButtonPanel);
 
-  if Assigned(FCanvas) then
-    FreeAndNil(FCanvas);
+  FreeAndNil(FCanvas);
 
   inherited Destroy;
 end;
@@ -1340,6 +1351,8 @@ begin
     Exit;
 
   FButtonPanel := TButtonBarPanel.Create(Self);
+  FButtonPanel.ParentBackground := True;
+  FButtonPanel.ParentColor := True;
   FButtonPanel.ParentDoubleBuffered := True;
   FButtonPanel.BevelOuter := bvNone;
   FButtonPanel.Left := 0;
@@ -1663,9 +1676,11 @@ begin
       LItem.Button.ImageIndex := LItem.ImageIndex;
       LItem.Button.Glyph := nil;
       LItem.Button.Layout := LItem.Layout;
+      LItem.Button.Font.Name := Font.Name;
       LItem.Button.Font.Size := Font.Size;
+      LItem.Button.Font.Quality := fqClearTypeNatural;
       LItem.Button.DropdownMenu := LItem.Dropdown.PopupMenu;
-
+      LItem.Button.MainControl := nil;
 {$IFDEF ALPHASKINS}
       LItem.Button.Blend := LItem.Blend;
       LItem.Button.DisabledGlyphKind := LItem.DisabledGlyphKind;
@@ -1727,7 +1742,7 @@ begin
 
         if opShowCaptions in FOptions then
         begin
-          LItem.Button.Canvas.Font.Assign(Font);
+          LItem.Button.Canvas.Font.Name := Font.Name;
           LItem.Button.Canvas.Font.Size := Font.Size;
           LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(6); { 6 = 3 x 2 Margin }
 
@@ -1750,13 +1765,11 @@ end;
 
 procedure TButtonBar.WMPaint(var AMessage: TWMPaint);
 begin
-  if ShowNotItemsFound then
-    ControlState := ControlState + [csCustomPaint];
+  ControlState := ControlState + [csCustomPaint];
 
   inherited;
 
-  if ShowNotItemsFound then
-     ControlState := ControlState - [csCustomPaint];
+  ControlState := ControlState - [csCustomPaint];
 end;
 
 procedure TButtonBar.WMSize(var AMessage: TWMSize);
@@ -1776,29 +1789,18 @@ end;
 
 procedure TButtonBar.PaintWindow(DC: HDC);
 begin
-  if ShowNotItemsFound then
-  begin
-    if not Assigned(FCanvas) then
-    begin
-      FCanvas := TControlCanvas.Create;
-      TControlCanvas(FCanvas).Control := Self;
-    end;
-
-    FCanvas.Lock;
+  FCanvas.Lock;
+  try
+    FCanvas.Handle := DC;
     try
-      FCanvas.Handle := DC;
-      try
-        TControlCanvas(FCanvas).UpdateTextFlags;
-        Paint;
-      finally
-        FCanvas.Handle := 0;
-      end;
+      TControlCanvas(FCanvas).UpdateTextFlags;
+      Paint;
     finally
-      FCanvas.Unlock;
+      FCanvas.Handle := 0;
     end;
-  end
-  else
-    inherited;
+  finally
+    FCanvas.Unlock;
+  end;
 end;
 
 procedure TButtonBar.Paint;
@@ -1807,40 +1809,57 @@ var
   LTextHeight, LTextWidth: Integer;
   LFlags: Cardinal;
 begin
-  if not ShowNotItemsFound then
-    Exit;
-
-  LRect := ClientRect;
-
-  FCanvas.Brush.Color := TColors.Red;
-  FCanvas.Brush.Style := bsFDiagonal;
-  FCanvas.Pen.Color := TColors.Red;
-  FCanvas.Rectangle(LRect);
-
-  FCanvas.Brush.Color := TColors.Red;
-  FCanvas.Brush.Style := bsSolid;
-
-  FCanvas.Font.Color := TColors.White;
-  FCanvas.Font.Quality := fqAntialiased;
-  FCanvas.Font.Style := [fsBold];
-
-  LTextWidth := FCanvas.TextWidth(ButtonBarNoItemsFound);
-  LFlags := DT_VCENTER or DT_SINGLELINE;
-
-  if Width < LTextWidth then
+  if ShowNotItemsFound then
   begin
-    FCanvas.Font.Orientation := 900;
-    LTextHeight := FCanvas.TextHeight(ButtonBarNoItemsFound);
-    LRect.Top := LTextWidth;
-    LRect.Left := (Width - LTextHeight) div 2;
+    LRect := ClientRect;
+
+    FCanvas.Brush.Color := TColors.Red;
+    FCanvas.Brush.Style := bsFDiagonal;
+    FCanvas.Pen.Color := TColors.Red;
+    FCanvas.Rectangle(LRect);
+
+    FCanvas.Brush.Color := TColors.Red;
+    FCanvas.Brush.Style := bsSolid;
+
+    FCanvas.Font.Color := TColors.White;
+    FCanvas.Font.Quality := fqAntialiased;
+    FCanvas.Font.Style := [fsBold];
+
+    LTextWidth := FCanvas.TextWidth(ButtonBarNoItemsFound);
+    LFlags := DT_VCENTER or DT_SINGLELINE;
+
+    if Width < LTextWidth then
+    begin
+      FCanvas.Font.Orientation := 900;
+      LTextHeight := FCanvas.TextHeight(ButtonBarNoItemsFound);
+      LRect.Top := LTextWidth;
+      LRect.Left := (Width - LTextHeight) div 2;
+    end
+    else
+    begin
+      FCanvas.Font.Orientation := 0;
+      LFlags := LFlags or DT_CENTER;
+    end;
+
+    DrawText(FCanvas.Handle, ButtonBarNoItemsFound, -1, LRect, LFlags);
   end
   else
   begin
-    FCanvas.Font.Orientation := 0;
-    LFlags := LFlags or DT_CENTER;
-  end;
+    if ParentColor then
+      FCanvas.Brush.Style := bsClear
+    else
+      FCanvas.Brush.Color := Color;
 
-  DrawText(FCanvas.Handle, ButtonBarNoItemsFound, -1, LRect, LFlags)
+    if StyleServices.Enabled and Assigned(Parent) and (csParentBackground in ControlStyle) then
+    begin
+      {if Parent.DoubleBuffered then
+        PerformEraseBackground(Self, FCanvas.Handle)
+      else  }
+        StyleServices.DrawParentBackground(Handle, FCanvas.Handle, nil, False);
+    end
+    else
+      FCanvas.FillRect(ClientRect);
+  end;
 end;
 
 procedure TButtonBar.SetImages(const AValue: TCustomImageList);
