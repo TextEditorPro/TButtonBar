@@ -179,6 +179,7 @@ type
     FBlend: Integer;
     FDisabledGlyphKind: TsDisabledGlyphKind;
     FReflected: Boolean;
+    FTextOffset: Integer;
 {$ENDIF}
     function CanUpdateButton: Boolean;
     function GetAction: TBasicAction;
@@ -204,6 +205,7 @@ type
     procedure SetBlend(const AValue: Integer);
     procedure SetDisabledGlyphKind(const AValue: TsDisabledGlyphKind);
     procedure SetReflected(const AValue: Boolean);
+    procedure SetTextOffset(const AValue: Integer);
 {$ENDIF}
   protected
     function GetActionLinkClass: TButtonBarItemActionLinkClass;
@@ -242,6 +244,7 @@ type
     property Blend: Integer read FBlend write SetBlend default 0;
     property DisabledGlyphKind: TsDisabledGlyphKind read FDisabledGlyphKind write SetDisabledGlyphKind default [];
     property Reflected: Boolean read FReflected write SetReflected default False;
+    property TextOffset: Integer read FTextOffset write SetTextOffset default 0;
 {$ENDIF}
   end;
 
@@ -875,6 +878,7 @@ begin
   FBlend := 0;
   FDisabledGlyphKind := [];
   FReflected := False;
+  FTextOffset := 0;
 {$ENDIF}
 
   FCounter := TButtonBarItemCounter.Create;
@@ -925,6 +929,7 @@ begin
     Self.FBlend := FBlend;
     Self.FDisabledGlyphKind := FDisabledGlyphKind;
     Self.FReflected := FReflected;
+    Self.FTextOffset := FTextOffset;
 {$ENDIF}
   end
   else
@@ -1015,6 +1020,16 @@ begin
   if FReflected <> AValue then
   begin
     FReflected := AValue;
+
+    UpdateButton;
+  end;
+end;
+
+procedure TButtonBarCollectionItem.SetTextOffset(const AValue: Integer);
+begin
+  if FTextOffset <> AValue then
+  begin
+    FTextOffset := AValue;
 
     UpdateButton;
   end;
@@ -1603,6 +1618,7 @@ begin
   begin
     LItem := TButtonBarCollectionItem(ASource);
 
+    LItem.Button.Images := FImages;
     LItem.Button.Action := LItem.Action;
     LItem.Button.OnClick := LItem.OnClick;
     LItem.Button.AllowAllUp := LItem.AllowAllUp;
@@ -1610,11 +1626,24 @@ begin
     LItem.Button.Down := LItem.Down;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
-
+{$IFDEF ALPHASKINS}
+    LItem.Button.ShowCaption := opShowCaptions in FOptions;
+{$ENDIF}
     if LItem.Layout = blGlyphLeft then
+    begin
       LItem.Button.Margin := ScaleInt(3);
-
-    LItem.Button.Images := FImages;
+{$IFDEF ALPHASKINS}
+      LItem.Button.Alignment := taLeftJustify;
+      LItem.Button.TextAlignment := taLeftJustify;
+{$ENDIF}
+    end
+    else
+    begin
+{$IFDEF ALPHASKINS}
+      LItem.Button.Alignment := taCenter;
+      LItem.Button.TextAlignment := taCenter;
+{$ENDIF}
+    end;
 
     if csDesigning in ComponentState then
       LItem.Button.Visible := True
@@ -1676,16 +1705,18 @@ begin
       LItem.Button.ImageIndex := LItem.ImageIndex;
       LItem.Button.Glyph := nil;
       LItem.Button.Layout := LItem.Layout;
-      LItem.Button.Font.Name := Font.Name;
-      LItem.Button.Font.Size := Font.Size;
-      LItem.Button.Font.Quality := fqClearTypeNatural;
+      LItem.Button.Font.Assign(Font);
       LItem.Button.DropdownMenu := LItem.Dropdown.PopupMenu;
       LItem.Button.MainControl := nil;
 {$IFDEF ALPHASKINS}
       LItem.Button.Blend := LItem.Blend;
       LItem.Button.DisabledGlyphKind := LItem.DisabledGlyphKind;
       LItem.Button.Reflected := LItem.Reflected;
-      LItem.Button.ButtonStyle := tbsTextButton;
+
+      if LItem.Button.ShowCaption then
+        LItem.Button.ButtonStyle := tbsTextButton
+      else
+        LItem.Button.ButtonStyle := tbsButton;
 {$ENDIF}
 
       LNotifyEvent := DummyClickEvent;
@@ -1736,19 +1767,22 @@ begin
       if Orientation = soHorizontal then
       begin
         LItem.Button.Width := ScaleInt(FDefaults.ButtonSize);
-
+{$IF NOT DEFINED(ALPHASKINS)}
         if LItem.Button.DropdownButtonVisible and Assigned(LItem.Dropdown.PopupMenu) then
           LItem.Button.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
-
+{$ENDIF}
         if opShowCaptions in FOptions then
         begin
-          LItem.Button.Canvas.Font.Name := Font.Name;
-          LItem.Button.Canvas.Font.Size := Font.Size;
+          LItem.Button.Canvas.Font.Assign(Font);
           LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(6); { 6 = 3 x 2 Margin }
 
           if LTextWidth > LItem.Button.Width then
             LItem.Button.Width := LTextWidth;
         end;
+{$IFDEF ALPHASKINS}
+        if LItem.Button.DropdownButtonVisible and Assigned(LItem.Dropdown.PopupMenu) then
+          LItem.Button.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
+{$ENDIF}
       end
       else
         LItem.Button.Height := ScaleInt(FDefaults.ButtonSize);
