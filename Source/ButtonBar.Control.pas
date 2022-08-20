@@ -109,7 +109,6 @@ type
     FButtonWidth: Integer;
     FHint: string;
     FOnChange: TNotifyEvent;
-    FPopupMenu: TPopupMenu;
     FVisible: Boolean;
     procedure DoChange(Sender: TObject);
     procedure SetVisible(const AValue: Boolean);
@@ -120,7 +119,6 @@ type
     property ButtonWidth: Integer read FButtonWidth write FButtonWidth default 16;
     property Hint: string read FHint write FHint;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
-    property PopupMenu: TPopupMenu read FPopupMenu write FPopupMenu;
     property Visible: Boolean read FVisible write SetVisible default False;
   end;
 
@@ -163,6 +161,7 @@ type
     FDown: Boolean;
     FDropdown: TButtonBarItemDropdown;
     FDropdownButton: TButtonBarControl;
+    FDropdownMenu: TPopupMenu;
     FEnabled: Boolean;
     FFlat: Boolean;
     FGroupIndex: Integer;
@@ -228,6 +227,7 @@ type
     property Cursor: TCursor read FCursor write FCursor default crDefault;
     property Down: Boolean read FDown write SetDown default False;
     property Dropdown: TButtonBarItemDropdown read FDropdown write FDropdown;
+    property DropdownMenu: TPopupMenu read FDropdownMenu write FDropdownMenu;
     property Enabled: Boolean read FEnabled write SetEnabled default True;
     property Flat: Boolean read FFlat write SetFlat default True;
     property GroupIndex: Integer read FGroupIndex write SetGroupIndex default 0;
@@ -301,7 +301,6 @@ type
     procedure UnlockPainting;
     procedure UpdateButtonPositions(const ACheckDesigning: Boolean = False);
     procedure UpdateButtons(const AIsLast: Boolean = False);
-    procedure WMPaint(var AMessage: TWMPaint); message WM_PAINT;
     procedure WMSize(var AMessage: TWMSize); message WM_SIZE;
   protected
     function FormatCaption(const ACaption: string): string; virtual;
@@ -319,7 +318,6 @@ type
     property ItemByName[const AName: string]: TButtonBarCollectionItem read GetItemByName;
   published
     property Align default alTop;
-    property Canvas: TCanvas read FCanvas;
     property Defaults: TButtonBarDefaults read FDefaults write FDefaults;
     property DoubleBuffered default True;
     property Images: TCustomImageList read FImages write SetImages;
@@ -510,8 +508,8 @@ begin
 
         if Assigned(FDropdownMenu) and FDropdownButtonVisible then
         begin
-            LArrowHeight := ScaleInt(4);
-            LArrowWidth := ScaleInt(7);
+            LArrowHeight := ScaleInt(5);
+            LArrowWidth := ScaleInt(9);
 
             with ClientRect do
             begin
@@ -551,8 +549,8 @@ begin
 
       if Assigned(FDropdownMenu) and FDropdownButtonVisible then
       begin
-        LArrowHeight := ScaleInt(4);
-        LArrowWidth := ScaleInt(7);
+        LArrowHeight := ScaleInt(5);
+        LArrowWidth := ScaleInt(9);
 
         with ClientRect do
         begin
@@ -832,7 +830,6 @@ begin
   begin
     Self.FButtonWidth := FButtonWidth;
     Self.FHint := FHint;
-    Self.FPopupMenu := FPopupMenu;
     Self.FVisible := FVisible;
     Self.DoChange(Self);
   end
@@ -913,6 +910,7 @@ begin
     Self.FCursor := FCursor;
     Self.FDown := FDown;
     Self.FDropdown.Assign(FDropdown);
+    Self.FDropdownMenu := FDropdownMenu;
     Self.FEnabled := FEnabled;
     Self.FFlat := FFlat;
     Self.FGroupIndex := FGroupIndex;
@@ -1316,6 +1314,7 @@ begin
   inherited Create(AOwner);
 
   Align := alTop;
+  ControlState := ControlState + [csCustomPaint];
   ControlStyle := [csAcceptsControls, csCaptureMouse, csClickEvents, csGestures];
   DoubleBuffered := True;
   Font.Size := 7;
@@ -1360,13 +1359,26 @@ begin
   UpdateButtons;
 end;
 
+function IsParentTabSheet(const AControl: TWinControl): Boolean;
+begin
+  if Assigned(AControl) then
+  begin
+    if AControl is TTabSheet then
+      Result := True
+    else
+      Result := IsParentTabSheet(AControl.Parent);
+  end
+  else
+    Result := False;
+end;
+
 procedure TButtonBar.CreateButtonPanel;
 begin
   if Assigned(FButtonPanel) then
     Exit;
 
   FButtonPanel := TButtonBarPanel.Create(Self);
-  FButtonPanel.ParentBackground := True;
+  FButtonPanel.ParentBackground := IsParentTabSheet(Self);
   FButtonPanel.ParentColor := True;
   FButtonPanel.ParentDoubleBuffered := True;
   FButtonPanel.BevelOuter := bvNone;
@@ -1610,6 +1622,7 @@ var
   LTextWidth: Integer;
   LNotifyEvent: TNotifyEvent;
   LCaption: string;
+  LShowCaption: Boolean;
 begin
   if InUpdateBlock then
     Exit;
@@ -1654,7 +1667,9 @@ begin
 
     LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
 
-    if opShowHints in FOptions then
+    LShowCaption := opShowCaptions in FOptions;
+
+    if (opShowHints in FOptions) and (not LShowCaption or LShowCaption and (LItem.Caption <> LItem.Hint)) then
       LItem.Button.Hint := LItem.Hint
     else
       LItem.Button.Hint := '';
@@ -1662,7 +1677,7 @@ begin
     if Assigned(LItem.Counter) then
       LItem.Button.Counter.Assign(LItem.Counter);
 
-    if (LItem.Style = stDivider) or not (opShowCaptions in FOptions) then
+    if (LItem.Style = stDivider) or not LShowCaption then
       LItem.Button.Caption := ''
     else
     begin
@@ -1706,7 +1721,7 @@ begin
       LItem.Button.Glyph := nil;
       LItem.Button.Layout := LItem.Layout;
       LItem.Button.Font.Assign(Font);
-      LItem.Button.DropdownMenu := LItem.Dropdown.PopupMenu;
+      LItem.Button.DropdownMenu := LItem.DropdownMenu;
       LItem.Button.MainControl := nil;
 {$IFDEF ALPHASKINS}
       LItem.Button.Blend := LItem.Blend;
@@ -1721,7 +1736,7 @@ begin
 
       LNotifyEvent := DummyClickEvent;
 
-      if LItem.Visible and LItem.Dropdown.Visible and Assigned(LItem.Dropdown.PopupMenu) and
+      if LItem.Visible and LItem.Dropdown.Visible and Assigned(LItem.DropdownMenu) and
         Assigned(LItem.Button.OnClick) and Assigned(LItem.Action) and (@LItem.Action.OnExecute <> @LNotifyEvent) then
         CreateDropdownButton(LItem)
       else
@@ -1729,7 +1744,7 @@ begin
         FreeAndNil(LItem.DropdownButton);
 
       if not (csDesigning in ComponentState) and LItem.Visible and LItem.Dropdown.Visible and
-        Assigned(LItem.Dropdown.PopupMenu) and Assigned(LItem.Action) and not Assigned(LItem.Action.OnExecute) then
+        Assigned(LItem.DropdownMenu) and Assigned(LItem.Action) and not Assigned(LItem.Action.OnExecute) then
         LItem.Action.OnExecute := DummyClickEvent; { Action is disabled without execute event. }
 
       LItem.Button.DropdownButtonVisible := LItem.Dropdown.Visible and not Assigned(LItem.DropdownButton);
@@ -1745,7 +1760,7 @@ begin
         else
           LItem.DropdownButton.Align := alTop;
 
-        LItem.DropdownButton.DropdownMenu := LItem.Dropdown.PopupMenu;
+        LItem.DropdownButton.DropdownMenu := LItem.DropdownMenu;
         LItem.DropdownButton.Width := ScaleInt(LItem.Dropdown.ButtonWidth);
         LItem.DropdownButton.Hint := LItem.Dropdown.Hint;
         LItem.DropdownButton.Visible := LItem.Dropdown.Visible and LItem.Visible;
@@ -1768,7 +1783,7 @@ begin
       begin
         LItem.Button.Width := ScaleInt(FDefaults.ButtonSize);
 {$IF NOT DEFINED(ALPHASKINS)}
-        if LItem.Button.DropdownButtonVisible and Assigned(LItem.Dropdown.PopupMenu) then
+        if LItem.Button.DropdownButtonVisible and Assigned(LItem.DropdownMenu) then
           LItem.Button.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
 {$ENDIF}
         if opShowCaptions in FOptions then
@@ -1780,7 +1795,7 @@ begin
             LItem.Button.Width := LTextWidth;
         end;
 {$IFDEF ALPHASKINS}
-        if LItem.Button.DropdownButtonVisible and Assigned(LItem.Dropdown.PopupMenu) then
+        if LItem.Button.DropdownButtonVisible and Assigned(LItem.DropdownMenu) then
           LItem.Button.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
 {$ENDIF}
       end
@@ -1795,15 +1810,6 @@ end;
 function TButtonBar.ShowNotItemsFound: Boolean;
 begin
   Result := (csDesigning in ComponentState) and (FItems.Count = 0);
-end;
-
-procedure TButtonBar.WMPaint(var AMessage: TWMPaint);
-begin
-  ControlState := ControlState + [csCustomPaint];
-
-  inherited;
-
-  ControlState := ControlState - [csCustomPaint];
 end;
 
 procedure TButtonBar.WMSize(var AMessage: TWMSize);
@@ -1823,6 +1829,8 @@ end;
 
 procedure TButtonBar.PaintWindow(DC: HDC);
 begin
+  if Visible or (csDesigning in ComponentState) then
+  begin
   FCanvas.Lock;
   try
     FCanvas.Handle := DC;
@@ -1834,6 +1842,7 @@ begin
     end;
   finally
     FCanvas.Unlock;
+    end;
   end;
 end;
 

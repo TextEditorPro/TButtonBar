@@ -39,7 +39,7 @@ object MainForm: TMainForm
       item
         Action = ActionDemo2
         Caption = 'Demo2'
-        Dropdown.PopupMenu = PopupMenuDemo2
+        DropdownMenu = PopupMenuDemo2
         Dropdown.Visible = True
         ImageIndex = 1
         Name = 'Demo2'
@@ -47,7 +47,7 @@ object MainForm: TMainForm
       end
       item
         Caption = 'Demo4'
-        Dropdown.PopupMenu = PopupMenuDemo4
+        DropdownMenu = PopupMenuDemo4
         Dropdown.Visible = True
         ImageIndex = 1
         Name = 'Demo4'
