@@ -307,6 +307,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function FindItemByName(const AName: string): TButtonBarCollectionItem;
     procedure Assign(ASource: TPersistent); override;
     procedure Clear;
     procedure CreateButton(var AItem: TButtonBarCollectionItem);
@@ -1789,7 +1790,7 @@ begin
         if opShowCaptions in FOptions then
         begin
           LItem.Button.Canvas.Font.Assign(Font);
-          LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(6); { 6 = 3 x 2 Margin }
+          LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(12); { 12 = 6 x 2 Text margin }
 
           if LTextWidth > LItem.Button.Width then
             LItem.Button.Width := LTextWidth;
@@ -1946,11 +1947,13 @@ begin
   Result := FItems.Item[AIndex];
 end;
 
-function TButtonBar.GetItemByName(const AName: string): TButtonBarCollectionItem;
+function TButtonBar.FindItemByName(const AName: string): TButtonBarCollectionItem;
 var
   LIndex: Integer;
   LItem: TButtonBarCollectionItem;
 begin
+  Result := nil;
+
   for LIndex := 0 to FItems.Count - 1 do
   begin
     LItem := Item[LIndex];
@@ -1958,8 +1961,14 @@ begin
     if CompareText(LItem.Name, AName) = 0 then
       Exit(LItem);
   end;
+end;
 
-  raise ESTButtonBarException.CreateResFmt(@ButtonBarNoItemFoundWithName, [AName]);
+function TButtonBar.GetItemByName(const AName: string): TButtonBarCollectionItem;
+begin
+  Result := FindItemByName(AName);
+
+  if not Assigned(Result) then
+    raise ESTButtonBarException.CreateResFmt(@ButtonBarNoItemFoundWithName, [AName]);
 end;
 
 end.
