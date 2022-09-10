@@ -7,6 +7,9 @@ uses
   Vcl.Buttons, Vcl.ComCtrls, Vcl.Controls, Vcl.ExtCtrls, Vcl.Graphics, Vcl.ImgList, Vcl.Menus
 {$IFDEF ALPHASKINS}, acPageScroller, sCommonData, sConst, sPanel, sSkinProps, sSpeedButton{$ENDIF};
 
+const
+  WM_BUTTONBAR_ITEM_CLICK = WM_USER + 123; { for AutoIt }
+
 type
   TButtonBarPageScroller = class({$IFDEF ALPHASKINS}TsPageScroller{$ELSE}TPageScroller{$ENDIF});
   TButtonBarPanel = class({$IFDEF ALPHASKINS}TsPanel{$ELSE}TPanel{$ENDIF});
@@ -54,6 +57,7 @@ type
     FCounter: TButtonBarItemCounter;
     FDropdownMenu: TPopupMenu;
     FDropdownButtonVisible: Boolean;
+    FIgnoreFocus: Boolean;
     FInvisible: Boolean;
     FMainControl: TButtonBarControl;
     FOnBeforeMenuDropdown: TNotifyEvent;
@@ -78,6 +82,7 @@ type
     property Counter: TButtonBarItemCounter read FCounter write FCounter;
     property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
     property DropdownButtonVisible: Boolean read FDropdownButtonVisible write FDropdownButtonVisible;
+    property IgnoreFocus: Boolean read FIgnoreFocus write FIgnoreFocus default False;
     property Invisible: Boolean read FInvisible write FInvisible default False;
     property MainControl: TButtonBarControl read FMainControl write FMainControl;
     property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
@@ -171,6 +176,7 @@ type
     FName: string;
     FOnClick: TNotifyEvent;
     FOnCounterChanged: TSTCounterChangedEvent;
+    FOnMouseMove: TMouseMoveEvent;
     FStyle: TButtonBarItemStyle;
     FTag: Integer;
     FVisible: Boolean;
@@ -237,6 +243,7 @@ type
     property Name: string read FName write SetName;
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
     property OnCounterChanged: TSTCounterChangedEvent read FOnCounterChanged write FOnCounterChanged;
+    property OnMouseMove: TMouseMoveEvent read FOnMouseMove write FOnMouseMove;
     property Style: TButtonBarItemStyle read FStyle write SetStyle default stButton;
     property Tag: Integer read FTag write FTag default 0;
     property Visible: Boolean read FVisible write SetVisible default True;
@@ -261,21 +268,24 @@ type
   end;
 
   TButtonBarPosition = (poHorizontal, poVertical);
-  TButtonBarOption = (opFormatCaptions, opShowCaptions, opShowHints);
+  TButtonBarOption = (opFormatCaptions, opIgnoreFocus, opShowCaptions, opShowHints);
   TButtonBarOptions = set of TButtonBarOption;
 
   TButtonBar = class(TButtonBarPageScroller)
   private
+    FAutoSize: Boolean;
     FButtonPanel: TButtonBarPanel;
     FCanvas: TCanvas;
 {$IF CompilerVersion < 35}
     FDrawLockCount: Cardinal;
 {$ENDIF}
     FDefaults: TButtonBarDefaults;
+    FHeight: Integer;
     FImages: TCustomImageList;
     FItems: TButtonBarCollection;
     FOnBeforeMenuDropdown: TNotifyEvent;
     FOptions: TButtonBarOptions;
+    FWidth: Integer;
 {$IFDEF ALPHASKINS}
     class constructor Create;
     class destructor Destroy;
@@ -289,6 +299,7 @@ type
 {$ENDIF}
     function ShowNotItemsFound: Boolean;
     procedure CMRecreateWnd(var AMessage: TMessage); message CM_RECREATEWND;
+    procedure CMVisibleChanged(var AMessage: TMessage); message CM_VISIBLECHANGED;
     procedure CreateButtonPanel;
     procedure CreateDropdownButton(var AItem: TButtonBarCollectionItem);
     procedure DoDefaultChange(ASender: TObject);
@@ -301,6 +312,7 @@ type
     procedure UnlockPainting;
     procedure UpdateButtonPositions(const ACheckDesigning: Boolean = False);
     procedure UpdateButtons(const AIsLast: Boolean = False);
+    procedure OnButtonClickMessage(var AMessage: TMessage); message WM_BUTTONBAR_ITEM_CLICK;
     procedure WMSize(var AMessage: TWMSize); message WM_SIZE;
   protected
     function FormatCaption(const ACaption: string): string; virtual;
@@ -309,16 +321,20 @@ type
     destructor Destroy; override;
     function FindItemByName(const AName: string): TButtonBarCollectionItem;
     procedure Assign(ASource: TPersistent); override;
+    procedure AutoSizeButtonBar;
     procedure Clear;
     procedure CreateButton(var AItem: TButtonBarCollectionItem);
+    procedure HideButtons(const ANames: array of string);
     procedure Loaded; override;
     procedure Paint; {$IFDEF ALPHASKINS}override;{$ELSE}virtual;{$ENDIF}
     procedure PaintWindow(DC: HDC); override;
+    procedure UpdateParentBackground;
     property ControlByName[const AName: string]: TControl read GetControlByName;
     property Item[const AIndex: Integer]: TButtonBarCollectionItem read GetItem;
     property ItemByName[const AName: string]: TButtonBarCollectionItem read GetItemByName;
   published
     property Align default alTop;
+    property AutoSize: Boolean read FAutoSize write FAutoSize default False;
     property Defaults: TButtonBarDefaults read FDefaults write FDefaults;
     property DoubleBuffered default True;
     property Images: TCustomImageList read FImages write SetImages;
@@ -333,7 +349,7 @@ type
 implementation
 
 uses
-  System.RTLConsts, Vcl.Themes;
+  System.RTLConsts, System.StrUtils, Vcl.Themes;
 
 type
   ESTButtonBarException = class(Exception);
@@ -353,6 +369,7 @@ begin
   FCounter := TButtonBarItemCounter.Create;
 
   FArrowColor := TColors.SysWindowText;
+  FIgnoreFocus := False;
   FInvisible := False;
   FStyle := csButton;
 
@@ -922,8 +939,9 @@ begin
     Self.FStyle := FStyle;
     Self.FTag := FTag;
     Self.FVisible := FVisible;
-    Self.OnClick := OnClick;
-    Self.OnCounterChanged := OnCounterChanged;
+    Self.FOnClick := FOnClick;
+    Self.FOnCounterChanged := FOnCounterChanged;
+    Self.FOnMouseMove := FOnMouseMove;
 {$IFDEF ALPHASKINS}
     Self.FBlend := FBlend;
     Self.FDisabledGlyphKind := FDisabledGlyphKind;
@@ -1314,6 +1332,7 @@ constructor TButtonBar.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
 
+  FAutoSize := False;
   Align := alTop;
   ControlState := ControlState + [csCustomPaint];
   ControlStyle := [csAcceptsControls, csCaptureMouse, csClickEvents, csGestures];
@@ -1333,6 +1352,8 @@ begin
 
   FCanvas := TControlCanvas.Create;
   TControlCanvas(FCanvas).Control := Self;
+  FWidth := Width;
+  FHeight := Height;
 end;
 
 destructor TButtonBar.Destroy;
@@ -1357,7 +1378,38 @@ end;
 
 procedure TButtonBar.CMRecreateWnd(var AMessage: TMessage);
 begin
+  inherited;
+
   UpdateButtons;
+end;
+
+procedure TButtonBar.CMVisibleChanged(var AMessage: TMessage);
+begin
+  inherited;
+
+  { TPageScroller seems to ghost paint over controls in some situations when Visible is set to False.
+    This fixes the situation until the problem is resolved. }
+  if not (csDestroying in TButtonBar(Owner).ComponentState) then
+  begin
+    if Visible then
+    begin
+      if Orientation = soHorizontal then
+        Height := FHeight
+      else
+        Width := FWidth;
+    end
+    else
+    if Orientation = soHorizontal then
+    begin
+      FHeight := Height;
+      Height := 0
+    end
+    else
+    begin
+      FWidth := Width;
+      Width := 0;
+    end;
+  end;
 end;
 
 function IsParentTabSheet(const AControl: TWinControl): Boolean;
@@ -1388,6 +1440,15 @@ begin
   FButtonPanel.Parent := Self;
 
   Control := FButtonPanel;
+
+  FWidth := Width;
+  FHeight := Height;
+end;
+
+procedure TButtonBar.UpdateParentBackground;
+begin
+  if Assigned(FButtonPanel) then
+    FButtonPanel.ParentBackground := IsParentTabSheet(Self);
 end;
 
 procedure TButtonBar.Clear;
@@ -1560,6 +1621,45 @@ begin
   end;
 end;
 
+procedure TButtonBar.AutoSizeButtonBar;
+var
+  LIndex: Integer;
+  LHeightMargins, LWidthMargins: Integer;
+  LItem: TButtonBarCollectionItem;
+  LTextWidth: Integer;
+  LWidth: Integer;
+begin
+  LHeightMargins := 0;
+  LWidthMargins := 0;
+
+  if AlignWithMargins then
+  begin
+    LWidthMargins := Margins.Left + Margins.Right;
+    LHeightMargins := Margins.Top + Margins.Bottom;
+  end;
+
+  Height := FButtonPanel.Height + LHeightMargins;
+
+  LWidth := 0;
+  for LIndex := 0 to FItems.Count - 1 do
+  begin
+    LItem := FItems.Item[LIndex];
+
+    LItem.Button.Canvas.Font.Assign(Font);
+    LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(12); { 12 = 6 x 2 Text margin }
+
+    if LTextWidth > LWidth then
+    begin
+      LWidth := LTextWidth;
+
+      if Assigned(LItem.Button.Images) and (LItem.Button.ImageIndex <> -1) then
+        Inc(LWidth, LItem.Button.Images.Width);
+    end;
+  end;
+
+  Width := LWidth + LWidthMargins;
+end;
+
 procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
@@ -1593,6 +1693,9 @@ begin
     UpdateButtonPositions;
 
     FButtonPanel.AutoSize := True;
+
+    if FAutoSize then
+      AutoSizeButtonBar;
   finally
     UnlockPainting;
   end;
@@ -1634,12 +1737,18 @@ begin
 
     LItem.Button.Images := FImages;
     LItem.Button.Action := LItem.Action;
-    LItem.Button.OnClick := LItem.OnClick;
     LItem.Button.AllowAllUp := LItem.AllowAllUp;
     LItem.Button.Cursor := LItem.Cursor;
     LItem.Button.Down := LItem.Down;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
+    LItem.Button.IgnoreFocus := opIgnoreFocus in FOptions;
+    LItem.Button.Invisible := (csDesigning in ComponentState) and not LItem.Visible;
+    LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
+    LItem.Button.OnClick := LItem.OnClick;
+    LItem.Button.OnMouseMove := LItem.OnMouseMove;
+    LItem.Button.Tag := LItem.Tag;
+
 {$IFDEF ALPHASKINS}
     LItem.Button.ShowCaption := opShowCaptions in FOptions;
 {$ENDIF}
@@ -1664,13 +1773,11 @@ begin
     else
       LItem.Button.Visible := LItem.Visible;
 
-    LItem.Button.Invisible := (csDesigning in ComponentState) and not LItem.Visible;
-
-    LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
-
     LShowCaption := opShowCaptions in FOptions;
 
-    if (opShowHints in FOptions) and (not LShowCaption or LShowCaption and (LItem.Caption <> LItem.Hint)) then
+    if (opShowHints in FOptions) and
+      (not LShowCaption or LShowCaption and (LItem.Caption <> LItem.Hint) or
+      Assigned(LItem.Action) and (TAction(LItem.Action).ShortCut <> 0)) then
       LItem.Button.Hint := LItem.Hint
     else
       LItem.Button.Hint := '';
@@ -1765,7 +1872,7 @@ begin
         LItem.DropdownButton.Width := ScaleInt(LItem.Dropdown.ButtonWidth);
         LItem.DropdownButton.Hint := LItem.Dropdown.Hint;
         LItem.DropdownButton.Visible := LItem.Dropdown.Visible and LItem.Visible;
-				LItem.DropdownButton.MainControl := LItem.Button;
+        LItem.DropdownButton.MainControl := LItem.Button;
 {$IFDEF ALPHASKINS}
         LItem.DropdownButton.ButtonStyle := tbsDropDown;
         LItem.DropdownButton.SplitterStyle := dsLine;
@@ -1811,6 +1918,31 @@ end;
 function TButtonBar.ShowNotItemsFound: Boolean;
 begin
   Result := (csDesigning in ComponentState) and (FItems.Count = 0);
+end;
+
+procedure TButtonBar.OnButtonClickMessage(var AMessage: TMessage);
+var
+  LIndex: Integer;
+  LItem: TButtonBarCollectionItem;
+  LPoint: TPoint;
+begin
+  LIndex := AMessage.WParam;
+
+  if (LIndex >= 0) and (LIndex < FItems.Count) then
+  begin
+    LItem := FItems.Item[LIndex];
+
+    if Assigned(LItem.DropdownMenu) then
+    begin
+      LPoint := LItem.Button.ClientToScreen(Point(0, LItem.Button.Height));
+      LItem.DropdownMenu.Popup(LPoint.X, LPoint.Y);
+    end
+    else
+    if Assigned(LItem.Action) then
+      LItem.Action.Execute
+    else
+      LItem.OnClick(nil);
+  end;
 end;
 
 procedure TButtonBar.WMSize(var AMessage: TWMSize);
@@ -1969,6 +2101,27 @@ begin
 
   if not Assigned(Result) then
     raise ESTButtonBarException.CreateResFmt(@ButtonBarNoItemFoundWithName, [AName]);
+end;
+
+procedure TButtonBar.HideButtons(const ANames: array of string);
+var
+  LIndex: Integer;
+  LItem: TButtonBarCollectionItem;
+begin
+  FItems.BeginUpdate;
+
+  for LIndex := 0 to FItems.Count - 1 do
+  begin
+    LItem := Item[LIndex];
+
+    if MatchText(LItem.Name, ANames) then
+    begin
+      LItem.Action := nil;
+      LItem.Visible := False;
+    end;
+  end;
+
+  FItems.EndUpdate;
 end;
 
 end.
