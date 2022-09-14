@@ -431,9 +431,12 @@ begin
   if csDesigning in ComponentState then
     Exit;
 
-  LPanel := TButtonBarPanel(Owner);
-  if LPanel.CanFocus then
-    LPanel.SetFocus;
+  if not IgnoreFocus then
+  begin
+    LPanel := TButtonBarPanel(Owner);
+    if LPanel.CanFocus then
+      LPanel.SetFocus;
+  end;
 
   if Enabled and (AButton = mbLeft) and Assigned(FDropdownMenu) and (FDropdownButtonVisible or not Assigned(OnClick)) then
   begin
