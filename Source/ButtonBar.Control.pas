@@ -383,7 +383,7 @@ end;
 {$IF NOT DEFINED(ALPHASKINS)}
 function TButtonBarControl.ScaleInt(const ANumber: Integer): Integer;
 begin
-  Result := Muldiv(ANumber, CurrentPPI, 96);
+  Result := Trunc(ANumber * CurrentPPI / 96); // MulDiv is not correct for arrow scaling
 end;
 {$ENDIF}
 
