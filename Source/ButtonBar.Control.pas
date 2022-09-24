@@ -221,6 +221,7 @@ type
   public
     constructor Create(ACollection: TCollection); override;
     destructor Destroy; override;
+    function FormatCaption(const ACaption: string): string;
     procedure Assign(ASource: TPersistent); override;
     procedure InitiateAction; virtual;
     property Button: TButtonBarControl read FButton write FButton;
@@ -614,7 +615,7 @@ end;
 function TButtonBarItemActionLink.IsCaptionLinked: Boolean;
 begin
   Result := inherited IsCaptionLinked and (Action is TCustomAction) and
-    SameCaption(FClient.Caption, TCustomAction(Action).Caption);
+    SameCaption(FClient.Caption, FClient.FormatCaption(TCustomAction(Action).Caption));
 end;
 
 function TButtonBarItemActionLink.IsEnabledLinked: Boolean;
@@ -1156,6 +1157,17 @@ begin
     Result := FActionLink.Action
   else
     Result := nil;
+end;
+
+function TButtonBarCollectionItem.FormatCaption(const ACaption: string): string;
+var
+  LButtonBar: TButtonBar;
+begin
+  Result := ACaption;
+
+  LButtonBar := TButtonBar(Collection.Owner);
+  if opFormatCaptions in LButtonBar.Options then
+    Result := LButtonBar.FormatCaption(Result);
 end;
 
 procedure TButtonBarCollectionItem.UpdateButton;
@@ -1712,6 +1724,7 @@ end;
 function TButtonBar.FormatCaption(const ACaption: string): string;
 begin
   Result := ACaption;
+
   Result := StringReplace(Result, '&', '', [rfReplaceAll]);
   Result := StringReplace(Result, '...', '', [rfReplaceAll]);
 end;
