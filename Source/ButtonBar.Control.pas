@@ -384,7 +384,7 @@ end;
 {$IF NOT DEFINED(ALPHASKINS)}
 function TButtonBarControl.ScaleInt(const ANumber: Integer): Integer;
 begin
-  Result := Trunc(ANumber * CurrentPPI / 96); // MulDiv is not correct for arrow scaling
+  Result := ANumber * CurrentPPI div 96; // MulDiv is not correct for arrow painting
 end;
 {$ENDIF}
 
@@ -877,8 +877,6 @@ end;
 { TButtonBarCollectionItem }
 
 constructor TButtonBarCollectionItem.Create(ACollection: TCollection);
-var
-  LButtonBar: TButtonBar;
 begin
   inherited Create(ACollection);
 
@@ -905,17 +903,18 @@ begin
 
   FDropdown := TButtonBarItemDropdown.Create;
   FDropdown.OnChange := DoDropdownChange;
-
-  LButtonBar := TButtonBar(ACollection.Owner);
-  LButtonBar.CreateButton(Self);
 end;
 
 destructor TButtonBarCollectionItem.Destroy;
 begin
-  FreeAndNil(FActionLink);
+  if Assigned(FButton) then
+    FreeAndNil(FButton);
+
+  if Assigned(FActionLink) then
+    FreeAndNil(FActionLink);
+
   FreeAndNil(FCounter);
   FreeAndNil(FDropdown);
-  FreeAndNil(FButton);
 
   inherited Destroy;
 end;
@@ -1353,7 +1352,7 @@ begin
   ControlStyle := [csAcceptsControls, csCaptureMouse, csClickEvents, csGestures];
   DoubleBuffered := True;
   Font.Size := 7;
-  FOptions := [];
+  FOptions := [opShowHints];
   Height := 40;
   ParentColor := True;
   ParentBackground := True;
@@ -1367,19 +1366,16 @@ begin
 
   FCanvas := TControlCanvas.Create;
   TControlCanvas(FCanvas).Control := Self;
+
   FWidth := Width;
   FHeight := Height;
 end;
 
 destructor TButtonBar.Destroy;
 begin
-  FreeAndNil(FItems);
-  FreeAndNil(FDefaults);
-
-  if Assigned(FButtonPanel) then
-    FreeAndNil(FButtonPanel);
-
-  FreeAndNil(FCanvas);
+  FItems.Free;
+  FDefaults.Free;
+  FCanvas.Free;
 
   inherited Destroy;
 end;
@@ -1404,7 +1400,7 @@ begin
 
   { TPageScroller seems to ghost paint over controls in some situations when Visible is set to False.
     This fixes the situation until the problem is resolved. }
-  if not (csDestroying in TButtonBar(Owner).ComponentState) then
+  if not (csDestroying in ComponentState) then
   begin
     if Visible then
     begin
@@ -1679,11 +1675,11 @@ procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
 begin
-  if not Assigned(FButtonPanel) or not (([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
+  if InUpdateBlock or not (([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
     Exit;
 
-  if InUpdateBlock then
-    Exit;
+  if not Assigned(FButtonPanel) then
+    CreateButtonPanel;
 
   if AIsLast or (FItems.Count = 0) then
   begin
@@ -1750,6 +1746,9 @@ begin
   if ASource is TButtonBarCollectionItem then
   begin
     LItem := TButtonBarCollectionItem(ASource);
+
+    if not Assigned(LItem.Button) then
+      CreateButton(LItem);
 
     LItem.Button.Images := FImages;
     LItem.Button.Action := LItem.Action;
