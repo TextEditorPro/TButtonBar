@@ -55,8 +55,8 @@ type
   private
     FArrowColor: TColor;
     FCounter: TButtonBarItemCounter;
-    FDropdownMenu: TPopupMenu;
     FDropdownButtonVisible: Boolean;
+    FDropdownMenu: TPopupMenu;
     FIgnoreFocus: Boolean;
     FInvisible: Boolean;
     FMainControl: TButtonBarControl;
@@ -80,8 +80,8 @@ type
     destructor Destroy; override;
     property ArrowColor: TColor read FArrowColor write SetArrowColor default TColors.SysWindowText;
     property Counter: TButtonBarItemCounter read FCounter write FCounter;
-    property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
     property DropdownButtonVisible: Boolean read FDropdownButtonVisible write FDropdownButtonVisible;
+    property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
     property IgnoreFocus: Boolean read FIgnoreFocus write FIgnoreFocus default False;
     property Invisible: Boolean read FInvisible write FInvisible default False;
     property MainControl: TButtonBarControl read FMainControl write FMainControl;
@@ -176,6 +176,8 @@ type
     FName: string;
     FOnClick: TNotifyEvent;
     FOnCounterChanged: TSTCounterChangedEvent;
+    FOnMouseEnter: TNotifyEvent;
+    FOnMouseLeave: TNotifyEvent;
     FOnMouseMove: TMouseMoveEvent;
     FStyle: TButtonBarItemStyle;
     FTag: Integer;
@@ -244,6 +246,8 @@ type
     property Name: string read FName write SetName;
     property OnClick: TNotifyEvent read FOnClick write FOnClick;
     property OnCounterChanged: TSTCounterChangedEvent read FOnCounterChanged write FOnCounterChanged;
+    property OnMouseEnter: TNotifyEvent read FOnMouseEnter write FOnMouseEnter;
+    property OnMouseLeave: TNotifyEvent read FOnMouseLeave write FOnMouseLeave;
     property OnMouseMove: TMouseMoveEvent read FOnMouseMove write FOnMouseMove;
     property Style: TButtonBarItemStyle read FStyle write SetStyle default stButton;
     property Tag: Integer read FTag write FTag default 0;
@@ -269,7 +273,7 @@ type
   end;
 
   TButtonBarPosition = (poHorizontal, poVertical);
-  TButtonBarOption = (opFormatCaptions, opIgnoreFocus, opShowCaptions, opShowHints);
+  TButtonBarOption = (opFormatCaptions, opIgnoreFocus, opSetFocusOnButtonClick, opShowCaptions, opShowHints);
   TButtonBarOptions = set of TButtonBarOption;
 
   TButtonBar = class(TButtonBarPageScroller)
@@ -341,7 +345,7 @@ type
     property Images: TCustomImageList read FImages write SetImages;
     property Items: TButtonBarCollection read FItems write SetItems;
     property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
-    property Options: TButtonBarOptions read FOptions write SetOptions default [];
+    property Options: TButtonBarOptions read FOptions write SetOptions default [opShowHints];
     property ParentBackground default True;
     property ParentDoubleBuffered default False;
     property ParentFont default False;
@@ -353,7 +357,7 @@ uses
   System.RTLConsts, System.StrUtils, Vcl.Themes;
 
 type
-  ESTButtonBarException = class(Exception);
+  EButtonBarException = class(Exception);
 
 resourcestring
   ButtonBarItemDividerChar = '-';
@@ -944,6 +948,8 @@ begin
     Self.FVisible := FVisible;
     Self.FOnClick := FOnClick;
     Self.FOnCounterChanged := FOnCounterChanged;
+    Self.FOnMouseEnter := FOnMouseEnter;
+    Self.FOnMouseLeave := FOnMouseLeave;
     Self.FOnMouseMove := FOnMouseMove;
 {$IFDEF ALPHASKINS}
     Self.FBlend := FBlend;
@@ -1263,7 +1269,7 @@ begin
     FName := ''
   else
   if (Style = stButton) and TButtonBarCollection(Collection).DoesNameExist(LValue) then
-    raise ESTButtonBarException.CreateRes(@SDuplicateString)
+    raise EButtonBarException.CreateRes(@SDuplicateString)
   else
     FName := LValue
 end;
@@ -1469,14 +1475,8 @@ end;
 
 procedure TButtonBar.CreateButton(var AItem: TButtonBarCollectionItem);
 begin
-  CreateButtonPanel;
-
   AItem.Button := TButtonBarControl.Create(FButtonPanel);
   AItem.Button.Parent := FButtonPanel;
-
-  Assign(AItem);
-
-  UpdateButtonPositions(True);
 end;
 
 procedure TButtonBar.CreateDropdownButton(var AItem: TButtonBarCollectionItem);
@@ -1678,8 +1678,7 @@ begin
   if InUpdateBlock or not (([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
     Exit;
 
-  if not Assigned(FButtonPanel) then
-    CreateButtonPanel;
+  CreateButtonPanel;
 
   if AIsLast or (FItems.Count = 0) then
   begin
@@ -1752,6 +1751,7 @@ begin
 
     LItem.Button.Images := FImages;
     LItem.Button.Action := LItem.Action;
+    LItem.Button.OnClick := LItem.OnClick;
     LItem.Button.AllowAllUp := LItem.AllowAllUp;
     LItem.Button.Cursor := LItem.Cursor;
     LItem.Button.Down := LItem.Down;
@@ -1761,6 +1761,8 @@ begin
     LItem.Button.Invisible := (csDesigning in ComponentState) and not LItem.Visible;
     LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
     LItem.Button.OnClick := LItem.OnClick;
+    LItem.Button.OnMouseEnter := LItem.OnMouseEnter;
+    LItem.Button.OnMouseLeave := LItem.OnMouseLeave;
     LItem.Button.OnMouseMove := LItem.OnMouseMove;
     LItem.Button.Tag := LItem.Tag;
 
@@ -2115,7 +2117,7 @@ begin
   Result := FindItemByName(AName);
 
   if not Assigned(Result) then
-    raise ESTButtonBarException.CreateResFmt(@ButtonBarNoItemFoundWithName, [AName]);
+    raise EButtonBarException.CreateResFmt(@ButtonBarNoItemFoundWithName, [AName]);
 end;
 
 procedure TButtonBar.HideButtons(const ANames: array of string);
