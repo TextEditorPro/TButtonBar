@@ -63,6 +63,7 @@ type
     FOnBeforeMenuDropdown: TNotifyEvent;
     FSkipDropdown: Boolean;
     FStyle: TButtonBarControlStyle;
+    function GetArrowColor: TColor;
     function IsMouseOverControl: Boolean;
 {$IF NOT DEFINED(ALPHASKINS)}
     function ScaleInt(const ANumber: Integer): Integer; inline;
@@ -78,7 +79,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    property ArrowColor: TColor read FArrowColor write SetArrowColor default TColors.SysWindowText;
+    property ArrowColor: TColor read GetArrowColor write SetArrowColor default TColors.SysWindowText;
     property Counter: TButtonBarItemCounter read FCounter write FCounter;
     property DropdownButtonVisible: Boolean read FDropdownButtonVisible write FDropdownButtonVisible;
     property DropdownMenu: TPopupMenu read FDropdownMenu write SetDropdownMenu;
@@ -399,6 +400,14 @@ begin
   inherited Destroy;
 end;
 
+function TButtonBarControl.GetArrowColor: TColor;
+begin
+  if Enabled then
+    Result := FArrowColor
+  else
+    Result := clGray;
+end;
+
 procedure TButtonBarControl.SetArrowColor(const AValue: TColor);
 begin
   if FArrowColor <> AValue then
@@ -496,8 +505,8 @@ var
     LArrowPoints[1] := Point(X + LArrowWidth - 1, Y); // -1 because zero origin
     LArrowPoints[2] := Point(X + (LArrowWidth - 1) div 2, Y + LArrowHeight - 1);
 
-    LCanvas.Pen.Color := FArrowColor;
-    LCanvas.Brush.Color := FArrowColor;
+    LCanvas.Pen.Color := ArrowColor;
+    LCanvas.Brush.Color := ArrowColor;
     LCanvas.Brush.Style := bsSolid;
     LCanvas.Polygon(LArrowPoints);
   end;
@@ -1755,6 +1764,7 @@ begin
     LItem.Button.AllowAllUp := LItem.AllowAllUp;
     LItem.Button.Cursor := LItem.Cursor;
     LItem.Button.Down := LItem.Down;
+    LItem.Button.Enabled := LItem.Enabled;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
     LItem.Button.IgnoreFocus := opIgnoreFocus in FOptions;
