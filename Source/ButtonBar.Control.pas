@@ -134,6 +134,7 @@ type
   protected
     FClient: TButtonBarCollectionItem;
     function IsCaptionLinked: Boolean; override;
+    function IsCheckedLinked: Boolean; override;
     function IsEnabledLinked: Boolean; override;
     function IsGroupIndexLinked: Boolean; override;
     function IsHintLinked: Boolean; override;
@@ -142,6 +143,7 @@ type
     function IsVisibleLinked: Boolean; override;
     procedure AssignClient(AClient: TObject); override;
     procedure SetCaption(const AValue: string); override;
+    procedure SetChecked(AValue: Boolean); override;
     procedure SetEnabled(AValue: Boolean); override;
     procedure SetGroupIndex(AValue: Integer); override;
     procedure SetHint(const AValue: string); override;
@@ -162,6 +164,7 @@ type
     FAllowAllUp: Boolean;
     FButton: TButtonBarControl;
     FCaption: string;
+    FChecked: Boolean;
     FCounter: TButtonBarItemCounter;
     FCursor: TCursor;
     FDown: Boolean;
@@ -197,6 +200,7 @@ type
     procedure SetAction(const AValue: TBasicAction);
     procedure SetAllowAllUp(const AValue: Boolean);
     procedure SetCaption(const AValue: string);
+    procedure SetChecked(const AValue: Boolean);
     procedure SetDown(const AValue: Boolean);
     procedure SetEnabled(const AValue: Boolean);
     procedure SetFlat(const AValue: Boolean);
@@ -233,6 +237,7 @@ type
     property Action: TBasicAction read GetAction write SetAction;
     property AllowAllUp: Boolean read FAllowAllUp write SetAllowAllUp default False;
     property Caption: string read FCaption write SetCaption;
+    property Checked: Boolean read FChecked write SetChecked default False;
     property Counter: TButtonBarItemCounter read FCounter write FCounter;
     property Cursor: TCursor read FCursor write FCursor default crDefault;
     property Down: Boolean read FDown write SetDown default False;
@@ -631,6 +636,12 @@ begin
     SameCaption(FClient.Caption, FClient.FormatCaption(TCustomAction(Action).Caption));
 end;
 
+function TButtonBarItemActionLink.IsCheckedLinked: Boolean;
+begin
+  Result := inherited IsCheckedLinked and (Action is TCustomAction) and
+    (FClient.Checked = TCustomAction(Action).Checked);
+end;
+
 function TButtonBarItemActionLink.IsEnabledLinked: Boolean;
 begin
   Result := inherited IsEnabledLinked and (Action is TCustomAction) and
@@ -670,6 +681,12 @@ procedure TButtonBarItemActionLink.SetCaption(const AValue: string);
 begin
   if IsCaptionLinked then
     FClient.Caption := AValue;
+end;
+
+procedure TButtonBarItemActionLink.SetChecked(AValue: Boolean);
+begin
+  if IsCheckedLinked then
+    FClient.Checked := AValue;
 end;
 
 procedure TButtonBarItemActionLink.SetEnabled(AValue: Boolean);
@@ -894,6 +911,7 @@ begin
   inherited Create(ACollection);
 
   FAllowAllUp := False;
+  FChecked := False;
   FCursor := crDefault;
   FDown := False;
   FEnabled := True;
@@ -1013,6 +1031,17 @@ begin
   if FCaption <> AValue then
   begin
     FCaption := AValue;
+
+    if CanUpdateButton then
+      UpdateButton;
+  end;
+end;
+
+procedure TButtonBarCollectionItem.SetChecked(const AValue: Boolean);
+begin
+  if FChecked <> AValue then
+  begin
+    FChecked := AValue;
 
     if CanUpdateButton then
       UpdateButton;
@@ -1763,7 +1792,7 @@ begin
     LItem.Button.OnClick := LItem.OnClick;
     LItem.Button.AllowAllUp := LItem.AllowAllUp;
     LItem.Button.Cursor := LItem.Cursor;
-    LItem.Button.Down := LItem.Down;
+    LItem.Button.Down := LItem.Down or LItem.Checked;
     LItem.Button.Enabled := LItem.Enabled;
     LItem.Button.Flat := LItem.Flat;
     LItem.Button.GroupIndex := LItem.GroupIndex;
