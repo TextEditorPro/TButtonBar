@@ -453,6 +453,7 @@ begin
   if not IgnoreFocus then
   begin
     LPanel := TButtonBarPanel(Owner);
+
     if LPanel.CanFocus then
       LPanel.SetFocus;
   end;
@@ -1887,6 +1888,7 @@ begin
       LItem.Button.Font.Assign(Font);
       LItem.Button.DropdownMenu := LItem.DropdownMenu;
       LItem.Button.MainControl := nil;
+      LItem.Button.Style := csButton;
 {$IFDEF ALPHASKINS}
       LItem.Button.Blend := LItem.Blend;
       LItem.Button.DisabledGlyphKind := LItem.DisabledGlyphKind;

@@ -39,16 +39,16 @@ object MainForm: TMainForm
       item
         Action = ActionDemo2
         Caption = 'Demo2'
-        DropdownMenu = PopupMenuDemo2
         Dropdown.Visible = True
+        DropdownMenu = PopupMenuDemo2
         ImageIndex = 1
         Name = 'Demo2'
         OnClick = ActionDemo2Execute
       end
       item
         Caption = 'Demo4'
-        DropdownMenu = PopupMenuDemo4
         Dropdown.Visible = True
+        DropdownMenu = PopupMenuDemo4
         ImageIndex = 1
         Name = 'Demo4'
       end
@@ -137,7 +137,6 @@ object MainForm: TMainForm
       end
       item
         Style = stDivider
-        Visible = False
       end
       item
         Style = stDivider
@@ -145,6 +144,7 @@ object MainForm: TMainForm
       end
       item
         Style = stDivider
+        Visible = False
       end
       item
         Caption = 'Test 4 - Auto remove dividers'
