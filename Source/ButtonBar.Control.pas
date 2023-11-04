@@ -1,14 +1,20 @@
 ﻿unit ButtonBar.Control;
 
+{.$DEFINE USE_ITEM_CLICK_WM_MESSAGES}
+
 interface
 
 uses
   Winapi.Messages, Winapi.Windows, System.Classes, System.SysUtils, System.Types, System.UITypes, Vcl.ActnList,
   Vcl.Buttons, Vcl.ComCtrls, Vcl.Controls, Vcl.ExtCtrls, Vcl.Graphics, Vcl.ImgList, Vcl.Menus
-{$IFDEF ALPHASKINS}, acPageScroller, sCommonData, sConst, sPanel, sSkinProps, sSpeedButton{$ENDIF};
+{$IFDEF ALPHASKINS}
+  , acPageScroller, sCommonData, sConst, sPanel, sSkinProps, sSpeedButton
+{$ENDIF};
 
+{$IFDEF USE_ITEM_CLICK_WM_MESSAGES}
 const
-  WM_BUTTONBAR_ITEM_CLICK = WM_USER + 123; { for AutoIt }
+  WM_BUTTONBAR_ITEM_CLICK = WM_USER + 123;
+{$ENDIF}
 
 type
   TButtonBarPageScroller = class({$IFDEF ALPHASKINS}TsPageScroller{$ELSE}TPageScroller{$ENDIF});
@@ -96,10 +102,18 @@ type
     FDividerMargin: Integer;
     FDividerSize: Integer;
     FOnChange: TNotifyEvent;
+    FTextMargin: Integer;
+{$IF DEFINED(ALPHASKINS)}
+    FTextOffset: Integer;
+{$ENDIF}
     procedure DoChange(Sender: TObject);
     procedure SetButtonSize(const AValue: Integer);
     procedure SetDividerMargin(const AValue: Integer);
     procedure SetDividerSize(const AValue: Integer);
+    procedure SetTextMargin(const AValue: Integer);
+{$IF DEFINED(ALPHASKINS)}
+    procedure SetTextOffset(const AValue: Integer);
+{$ENDIF}
   public
     constructor Create;
     procedure Assign(ASource: TPersistent); override;
@@ -108,6 +122,10 @@ type
     property ButtonSize: Integer read FButtonSize write SetButtonSize default 38;
     property DividerMargin: Integer read FDividerMargin write SetDividerMargin default 5;
     property DividerSize: Integer read FDividerSize write SetDividerSize default 8;
+    property TextMargin: Integer read FTextMargin write SetTextMargin default 6;
+{$IF DEFINED(ALPHASKINS)}
+    property TextOffset: Integer read FTextOffset write SetTextOffset default 0;
+{$ENDIF}
   end;
 
   TButtonBarItemDropdown = class(TPersistent)
@@ -163,6 +181,7 @@ type
     FActionLink: TButtonBarItemActionLink;
     FAllowAllUp: Boolean;
     FButton: TButtonBarControl;
+    FButtonPanel: TButtonBarPanel;
     FCaption: string;
     FChecked: Boolean;
     FCounter: TButtonBarItemCounter;
@@ -232,6 +251,7 @@ type
     procedure Assign(ASource: TPersistent); override;
     procedure InitiateAction; virtual;
     property Button: TButtonBarControl read FButton write FButton;
+    property ButtonPanel: TButtonBarPanel read FButtonPanel write FButtonPanel;
     property DropdownButton: TButtonBarControl read FDropdownButton write FDropdownButton;
   published
     property Action: TBasicAction read GetAction write SetAction;
@@ -309,6 +329,7 @@ type
     function ScaleInt(const ANumber: Integer): Integer; inline;
 {$ENDIF}
     function ShowNotItemsFound: Boolean;
+    procedure AutoSizeButtonBar;
     procedure CMRecreateWnd(var AMessage: TMessage); message CM_RECREATEWND;
     procedure CMVisibleChanged(var AMessage: TMessage); message CM_VISIBLECHANGED;
     procedure CreateButtonPanel;
@@ -323,16 +344,18 @@ type
     procedure UnlockPainting;
     procedure UpdateButtonPositions(const ACheckDesigning: Boolean = False);
     procedure UpdateButtons(const AIsLast: Boolean = False);
+{$IFDEF USE_ITEM_CLICK_WM_MESSAGES}
     procedure OnButtonClickMessage(var AMessage: TMessage); message WM_BUTTONBAR_ITEM_CLICK;
+{$ENDIF}
     procedure WMSize(var AMessage: TWMSize); message WM_SIZE;
   protected
     function FormatCaption(const ACaption: string): string; virtual;
+    procedure SetAutoSize(AValue: Boolean); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function FindItemByName(const AName: string): TButtonBarCollectionItem;
     procedure Assign(ASource: TPersistent); override;
-    procedure AutoSizeButtonBar;
     procedure Clear;
     procedure CreateButton(var AItem: TButtonBarCollectionItem);
     procedure HideButtons(const ANames: array of string);
@@ -341,11 +364,11 @@ type
     procedure PaintWindow(DC: HDC); override;
     procedure UpdateParentBackground;
     property ControlByName[const AName: string]: TControl read GetControlByName;
-    property Item[const AIndex: Integer]: TButtonBarCollectionItem read GetItem;
     property ItemByName[const AName: string]: TButtonBarCollectionItem read GetItemByName;
+    property Item[const AIndex: Integer]: TButtonBarCollectionItem read GetItem;
   published
     property Align default alTop;
-    property AutoSize: Boolean read FAutoSize write FAutoSize default False;
+    property AutoSize: Boolean read FAutoSize write SetAutoSize default False;
     property Defaults: TButtonBarDefaults read FDefaults write FDefaults;
     property DoubleBuffered default True;
     property Images: TCustomImageList read FImages write SetImages;
@@ -547,8 +570,8 @@ begin
         begin
           inherited;
 
-        if Assigned(FDropdownMenu) and FDropdownButtonVisible then
-        begin
+          if Assigned(FDropdownMenu) and FDropdownButtonVisible then
+          begin
             LArrowHeight := ScaleInt(5);
             LArrowWidth := ScaleInt(9);
 
@@ -559,10 +582,10 @@ begin
             end;
 
             DrawArrow(LLeft, LTop);
-        end;
-      end
-    else
-      inherited;
+          end;
+        end
+      else
+        inherited;
 
       if FCounter.Visible then
       begin
@@ -816,6 +839,10 @@ begin
   FButtonSize := 38;
   FDividerMargin := 5;
   FDividerSize := 8;
+  FTextMargin := 6;
+{$IF DEFINED(ALPHASKINS)}
+  FTextOffset := 0;
+{$ENDIF}
 end;
 
 procedure TButtonBarDefaults.Assign(ASource: TPersistent);
@@ -826,6 +853,10 @@ begin
     Self.FButtonSize := FButtonSize;
     Self.FDividerMargin := FDividerMargin;
     Self.FDividerSize := FDividerSize;
+    Self.FTextMargin := FTextMargin;
+{$IF DEFINED(ALPHASKINS)}
+    Self.FTextOffset := FTextOffset;
+{$ENDIF}
     Self.DoChange(Self);
   end
   else
@@ -864,6 +895,26 @@ begin
     DoChange(Self);
   end;
 end;
+
+procedure TButtonBarDefaults.SetTextMargin(const AValue: Integer);
+begin
+  if AValue <> FTextMargin then
+  begin
+    FTextMargin := AValue;
+    DoChange(Self);
+  end;
+end;
+
+{$IF DEFINED(ALPHASKINS)}
+procedure TButtonBarDefaults.SetTextOffset(const AValue: Integer);
+begin
+  if AValue <> FTextOffset then
+  begin
+    FTextOffset := AValue;
+    DoChange(Self);
+  end;
+end;
+{$ENDIF}
 
 { TButtonBarDropdown }
 
@@ -1210,6 +1261,7 @@ begin
   Result := ACaption;
 
   LButtonBar := TButtonBar(Collection.Owner);
+
   if opFormatCaptions in LButtonBar.Options then
     Result := LButtonBar.FormatCaption(Result);
 end;
@@ -1418,9 +1470,9 @@ end;
 
 destructor TButtonBar.Destroy;
 begin
-  FItems.Free;
-  FDefaults.Free;
-  FCanvas.Free;
+  FreeAndNil(FItems);
+  FreeAndNil(FDefaults);
+  FreeAndNil(FCanvas);
 
   inherited Destroy;
 end;
@@ -1523,8 +1575,19 @@ begin
   if Assigned(AItem.DropdownButton) then
     Exit;
 
+  AItem.ButtonPanel := TButtonBarPanel.Create(FButtonPanel);
+  AItem.ButtonPanel.ParentBackground := True;
+  AItem.ButtonPanel.ParentColor := True;
+  AItem.ButtonPanel.ParentDoubleBuffered := True;
+  AItem.ButtonPanel.BevelOuter := bvNone;
+  AItem.ButtonPanel.Parent := FButtonPanel;
+
+  AItem.Button.Align := alClient;
+  AItem.Button.Parent := AItem.ButtonPanel;
+
   AItem.DropdownButton := TButtonBarControl.Create(FButtonPanel);
-  AItem.DropdownButton.Parent := FButtonPanel;
+  AItem.DropdownButton.Align := alRight;
+  AItem.DropdownButton.Parent := AItem.ButtonPanel;
 end;
 
 procedure TButtonBar.LockPainting;
@@ -1532,6 +1595,7 @@ begin
 {$IF CompilerVersion < 35}
   if (FDrawLockCount = 0) and HandleAllocated and Visible then
     SendMessage(WindowHandle, WM_SETREDRAW, Ord(False), 0);
+
   Inc(FDrawLockCount);
 {$ELSE}
   LockDrawing;
@@ -1544,6 +1608,7 @@ begin
   if FDrawLockCount > 0 then
   begin
     Dec(FDrawLockCount);
+
     if (FDrawLockCount = 0) and HandleAllocated and Visible then
     begin
       SendMessage(WindowHandle, WM_SETREDRAW, Ord(True), 0);
@@ -1609,44 +1674,40 @@ begin
 
       if Orientation = soHorizontal then
       begin
-        LItem.Button.Left := LLeft;
-
-        if LItem.Button.Visible then
-          Inc(LLeft, LItem.Button.Width);
-
-        if LItem.Button.AlignWithMargins then
-          Inc(LLeft, LItem.Button.Margins.Left + LItem.Button.Margins.Right);
-
-        if Assigned(LItem.DropdownButton) then
+        if Assigned(LItem.ButtonPanel) then
         begin
-          LItem.DropdownButton.Left := LLeft;
+          LItem.ButtonPanel.Left := LLeft;
 
-          if LItem.DropdownButton.Visible then
-            Inc(LLeft, LItem.DropdownButton.Width);
+          Inc(LLeft, LItem.ButtonPanel.Width);
+        end
+        else
+        begin
+          LItem.Button.Left := LLeft;
 
-          if LItem.DropdownButton.AlignWithMargins then
-            Inc(LLeft, LItem.DropdownButton.Margins.Left + LItem.DropdownButton.Margins.Right);
+          if LItem.Button.Visible then
+            Inc(LLeft, LItem.Button.Width);
+
+          if LItem.Button.AlignWithMargins then
+            Inc(LLeft, LItem.Button.Margins.Left + LItem.Button.Margins.Right);
         end;
       end
       else
       begin
-        LItem.Button.Top := LTop;
-
-        if LItem.Button.Visible then
-          Inc(LTop, LItem.Button.Height);
-
-        if LItem.Button.AlignWithMargins then
-          Inc(LTop, LItem.Button.Margins.Top + LItem.Button.Margins.Bottom);
-
-        if Assigned(LItem.DropdownButton) then
+        if Assigned(LItem.ButtonPanel) then
         begin
-          LItem.DropdownButton.Top := LTop;
+          LItem.ButtonPanel.Top := LTop;
 
-          if LItem.DropdownButton.Visible then
-            Inc(LTop, LItem.DropdownButton.Height);
+          Inc(LTop, LItem.ButtonPanel.Height);
+        end
+        else
+        begin
+          LItem.Button.Top := LTop;
 
-          if LItem.DropdownButton.AlignWithMargins then
-            Inc(LTop, LItem.DropdownButton.Margins.Top + LItem.DropdownButton.Margins.Bottom);
+          if LItem.Button.Visible then
+            Inc(LTop, LItem.Button.Height);
+
+          if LItem.Button.AlignWithMargins then
+            Inc(LTop, LItem.Button.Margins.Top + LItem.Button.Margins.Bottom);
         end;
       end;
     end;
@@ -1671,14 +1732,22 @@ begin
   end;
 end;
 
+procedure TButtonBar.SetAutoSize(AValue: Boolean);
+begin
+  FAutoSize := AValue;
+
+  AutoSizeButtonBar;
+end;
+
 procedure TButtonBar.AutoSizeButtonBar;
 var
-  LIndex: Integer;
   LHeightMargins, LWidthMargins: Integer;
   LItem: TButtonBarCollectionItem;
-  LTextWidth: Integer;
-  LWidth: Integer;
+  LIndex, LHeight, LWidth, LTextWidth: Integer;
 begin
+  if (FItems.Count = 0) or (Align <> alNone) then
+    Exit;
+
   LHeightMargins := 0;
   LWidthMargins := 0;
 
@@ -1688,26 +1757,55 @@ begin
     LHeightMargins := Margins.Top + Margins.Bottom;
   end;
 
-  Height := FButtonPanel.Height + LHeightMargins;
+  LItem := FItems.Item[FItems.Count - 1];
 
-  LWidth := 0;
-  for LIndex := 0 to FItems.Count - 1 do
+  if Orientation = soHorizontal then
   begin
-    LItem := FItems.Item[LIndex];
+    Height := FDefaults.ButtonSize + LHeightMargins;
 
-    LItem.Button.Canvas.Font.Assign(Font);
-    LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(12); { 12 = 6 x 2 Text margin }
+    if Assigned(LItem.ButtonPanel) then
+      Width := LItem.ButtonPanel.Left + LItem.ButtonPanel.Width + LWidthMargins
+    else
+    if Assigned(LItem.Button) then
+      Width := LItem.Button.Left + LItem.Button.Width + LWidthMargins
+  end
+  else
+  begin
+    LWidth := 0;
+    LHeight := 0;
 
-    if LTextWidth > LWidth then
+    for LIndex := 0 to FItems.Count - 1 do
     begin
-      LWidth := LTextWidth;
+      LItem := FItems.Item[LIndex];
 
-      if Assigned(LItem.Button.Images) and (LItem.Button.ImageIndex <> -1) then
-        Inc(LWidth, LItem.Button.Images.Width);
+      if Assigned(LItem.Button) and LItem.Visible then
+      begin
+        if LItem.Button.Top + LItem.Button.Height > LHeight then
+          LHeight := LItem.Button.Top + LItem.Button.Height + LItem.Button.Margin;
+
+        if LItem.Button.Style in [csHorizontalDivider, csVerticalDivider] then
+          Inc(LHeight, LItem.Button.Margin);
+
+        LItem.Button.Canvas.Font.Assign(Font);
+
+        LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(2 * FDefaults.TextMargin);
+
+        if LTextWidth > LWidth then
+        begin
+          LWidth := LTextWidth;
+
+          if Assigned(LItem.Button.Images) and (LItem.Button.ImageIndex <> -1) then
+            Inc(LWidth, LItem.Button.Images.Width);
+
+          if Assigned(LItem.DropdownButton) then
+            Inc(LWidth, ScaleInt(LItem.Dropdown.ButtonWidth));
+        end;
+      end;
     end;
-  end;
 
-  Width := LWidth + LWidthMargins;
+    Height := LHeight + LHeightMargins;
+    Width := LWidth + LWidthMargins;
+  end;
 end;
 
 procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
@@ -1807,6 +1905,11 @@ begin
     LItem.Button.Tag := LItem.Tag;
 
 {$IFDEF ALPHASKINS}
+    if LItem.TextOffset > 0 then
+      LItem.Button.TextOffSet := LItem.TextOffset
+    else
+      LItem.Button.TextOffSet := FDefaults.TextOffset;
+
     LItem.Button.ShowCaption := opShowCaptions in FOptions;
 {$ENDIF}
     if LItem.Layout = blGlyphLeft then
@@ -1907,7 +2010,10 @@ begin
         CreateDropdownButton(LItem)
       else
       if Assigned(LItem.DropdownButton) then
+      begin
         FreeAndNil(LItem.DropdownButton);
+        FreeAndNil(LItem.ButtonPanel);
+      end;
 
       if not (csDesigning in ComponentState) and LItem.Visible and LItem.Dropdown.Visible and
         Assigned(LItem.DropdownMenu) and Assigned(LItem.Action) and not Assigned(LItem.Action.OnExecute) then
@@ -1921,10 +2027,12 @@ begin
         LItem.DropdownButton.DropdownButtonVisible := True;
         LItem.DropdownButton.Flat := LItem.Flat;
 
+        LItem.ButtonPanel.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
+
         if Orientation = soHorizontal then
-          LItem.DropdownButton.Align := alLeft
+          LItem.ButtonPanel.Align := alLeft
         else
-          LItem.DropdownButton.Align := alTop;
+          LItem.ButtonPanel.Align := alTop;
 
         LItem.DropdownButton.DropdownMenu := LItem.DropdownMenu;
         LItem.DropdownButton.Width := ScaleInt(LItem.Dropdown.ButtonWidth);
@@ -1955,7 +2063,8 @@ begin
         if opShowCaptions in FOptions then
         begin
           LItem.Button.Canvas.Font.Assign(Font);
-          LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(12); { 12 = 6 x 2 Text margin }
+
+          LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(2 * FDefaults.TextMargin);
 
           if LTextWidth > LItem.Button.Width then
             LItem.Button.Width := LTextWidth;
@@ -1967,6 +2076,13 @@ begin
       end
       else
         LItem.Button.Height := ScaleInt(FDefaults.ButtonSize);
+
+      if Assigned(LItem.ButtonPanel) then
+      begin
+        LItem.ButtonPanel.Width := LItem.Button.Width + LItem.DropdownButton.Width;
+        LItem.ButtonPanel.Height := LItem.Button.Height;
+        LItem.Button.Align := alClient;
+      end;
     end;
   end
   else
@@ -1978,6 +2094,7 @@ begin
   Result := (csDesigning in ComponentState) and (FItems.Count = 0);
 end;
 
+{$IFDEF USE_ITEM_CLICK_WM_MESSAGES}
 procedure TButtonBar.OnButtonClickMessage(var AMessage: TMessage);
 var
   LIndex: Integer;
@@ -2002,6 +2119,7 @@ begin
       LItem.OnClick(nil);
   end;
 end;
+{$ENDIF}
 
 procedure TButtonBar.WMSize(var AMessage: TWMSize);
 begin
