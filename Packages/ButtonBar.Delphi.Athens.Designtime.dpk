@@ -1,6 +1,7 @@
-﻿package ButtonBar.Delphi.Yukon.Runtime;
+﻿package ButtonBar.Delphi.Athens.Designtime;
 
 {$R *.res}
+{$R *.dres}
 {$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
 {$ALIGN 8}
 {$ASSERTIONS ON}
@@ -9,30 +10,33 @@
 {$EXTENDEDSYNTAX ON}
 {$IMPORTEDDATA ON}
 {$IOCHECKS ON}
-{$LOCALSYMBOLS ON}
+{$LOCALSYMBOLS OFF}
 {$LONGSTRINGS ON}
 {$OPENSTRINGS ON}
-{$OPTIMIZATION OFF}
+{$OPTIMIZATION ON}
 {$OVERFLOWCHECKS OFF}
 {$RANGECHECKS OFF}
-{$REFERENCEINFO ON}
+{$REFERENCEINFO OFF}
 {$SAFEDIVIDE OFF}
-{$STACKFRAMES ON}
+{$STACKFRAMES OFF}
 {$TYPEDADDRESS OFF}
 {$VARSTRINGCHECKS ON}
 {$WRITEABLECONST ON}
 {$MINENUMSIZE 1}
 {$IMAGEBASE $400000}
-{$DEFINE DEBUG}
+{$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
-{$DESCRIPTION 'TButtonBar control package - runtime'}
-{$RUNONLY}
+{$DESCRIPTION 'TButtonBar control package - designtime'}
+{$DESIGNONLY}
 {$IMPLICITBUILD ON}
 
 requires
-  vcl;
+  designide,
+  rtl,
+  ButtonBar.Delphi.Athens.Runtime;
 
 contains
-  ButtonBar.Control in '..\Source\ButtonBar.Control.pas';
+  ButtonBar.Register in '..\Source\ButtonBar.Register.pas',
+  ButtonBar.PropertyEditors in '..\Source\ButtonBar.PropertyEditors.pas';
 
 end.

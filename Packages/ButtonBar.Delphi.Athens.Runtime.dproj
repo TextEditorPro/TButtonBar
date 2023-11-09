@@ -1,7 +1,7 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ProjectGuid>{F6380D77-1E61-4397-A5EC-9EC75B6CB702}</ProjectGuid>
-        <MainSource>ButtonBar.Delphi.Yukon.Runtime.dpk</MainSource>
+        <MainSource>ButtonBar.Delphi.Athens.Runtime.dpk</MainSource>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
@@ -59,7 +59,7 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
-        <SanitizedProjectName>ButtonBar_Delphi_Yukon_Runtime</SanitizedProjectName>
+        <SanitizedProjectName>ButtonBar_Delphi_Athens_Runtime</SanitizedProjectName>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <DCC_ImageBase>00400000</DCC_ImageBase>
@@ -148,7 +148,7 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Source>
-                    <Source Name="MainSource">ButtonBar.Delphi.Yukon.Runtime.dpk</Source>
+                    <Source Name="MainSource">ButtonBar.Delphi.Athens.Runtime.dpk</Source>
                 </Source>
                 <VersionInfo>
                     <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
@@ -187,7 +187,7 @@
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment Version="4">
-                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\22.0\Bpl\ButtonBar.Delphi.Yukon.Runtime.bpl" Configuration="Debug" Class="ProjectOutput"/>
+                <DeployFile LocalName="C:\Users\Public\Documents\Embarcadero\Studio\22.0\Bpl\ButtonBar.Delphi.Athens.Runtime.bpl" Configuration="Debug" Class="ProjectOutput"/>
                 <DeployClass Name="AdditionalDebugSymbols">
                     <Platform Name="OSX32">
                         <Operation>1</Operation>
