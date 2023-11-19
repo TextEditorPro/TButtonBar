@@ -1761,7 +1761,7 @@ begin
 
   if Orientation = soHorizontal then
   begin
-    Height := FDefaults.ButtonSize + LHeightMargins;
+    Height := ScaleInt(FDefaults.ButtonSize) + LHeightMargins;
 
     if Assigned(LItem.ButtonPanel) then
       Width := LItem.ButtonPanel.Left + LItem.ButtonPanel.Width + LWidthMargins
@@ -1781,7 +1781,7 @@ begin
       if Assigned(LItem.Button) and LItem.Visible then
       begin
         if LItem.Button.Top + LItem.Button.Height > LHeight then
-          LHeight := LItem.Button.Top + LItem.Button.Height + LItem.Button.Margin;
+          LHeight := LItem.Button.Top + LItem.Button.Height + ScaleInt(LItem.Button.Margin + LItem.Button.Margins.Bottom);
 
         if LItem.Button.Style in [csHorizontalDivider, csVerticalDivider] then
           Inc(LHeight, LItem.Button.Margin);
@@ -2215,10 +2215,19 @@ begin
 end;
 
 procedure TButtonBar.SetImages(const AValue: TCustomImageList);
+var
+  LIndex: Integer;
+  LItem: TButtonBarCollectionItem;
 begin
   FImages := AValue;
 
-  UpdateButtons;
+  for LIndex := 0 to FItems.Count - 1 do
+  begin
+    LItem := Item[LIndex];
+
+    if Assigned(LItem.Button) then
+      LItem.Button.Images := FImages;
+  end;
 end;
 
 procedure TButtonBar.SetItems(const AValue: TButtonBarCollection);
