@@ -1790,16 +1790,14 @@ begin
 
         LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(2 * FDefaults.TextMargin);
 
+        if Assigned(LItem.Button.Images) and (LItem.Button.ImageIndex <> -1) then
+          Inc(LTextWidth, LItem.Button.Images.Width);
+
+        if Assigned(LItem.DropdownButton) then
+          Inc(LTextWidth, ScaleInt(LItem.Dropdown.ButtonWidth));
+
         if LTextWidth > LWidth then
-        begin
           LWidth := LTextWidth;
-
-          if Assigned(LItem.Button.Images) and (LItem.Button.ImageIndex <> -1) then
-            Inc(LWidth, LItem.Button.Images.Width);
-
-          if Assigned(LItem.DropdownButton) then
-            Inc(LWidth, ScaleInt(LItem.Dropdown.ButtonWidth));
-        end;
       end;
     end;
 
@@ -1812,7 +1810,8 @@ procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
 begin
-  if InUpdateBlock or not (([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
+  if InUpdateBlock or not (([csLoading, csReading] * ComponentState = []) or
+    ([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
     Exit;
 
   CreateButtonPanel;
@@ -2010,10 +2009,7 @@ begin
         CreateDropdownButton(LItem)
       else
       if Assigned(LItem.DropdownButton) then
-      begin
         FreeAndNil(LItem.DropdownButton);
-        FreeAndNil(LItem.ButtonPanel);
-      end;
 
       if not (csDesigning in ComponentState) and LItem.Visible and LItem.Dropdown.Visible and
         Assigned(LItem.DropdownMenu) and Assigned(LItem.Action) and not Assigned(LItem.Action.OnExecute) then
@@ -2026,14 +2022,6 @@ begin
         LItem.DropdownButton.Style := csDropdown;
         LItem.DropdownButton.DropdownButtonVisible := True;
         LItem.DropdownButton.Flat := LItem.Flat;
-
-        LItem.ButtonPanel.Width := LItem.Button.Width + ScaleInt(LItem.Dropdown.ButtonWidth);
-
-        if Orientation = soHorizontal then
-          LItem.ButtonPanel.Align := alLeft
-        else
-          LItem.ButtonPanel.Align := alTop;
-
         LItem.DropdownButton.DropdownMenu := LItem.DropdownMenu;
         LItem.DropdownButton.Width := ScaleInt(LItem.Dropdown.ButtonWidth);
         LItem.DropdownButton.Hint := LItem.Dropdown.Hint;
@@ -2052,6 +2040,8 @@ begin
         LItem.Button.SplitterStyle := dsLine;
 {$ENDIF}
       end;
+
+      LTextWidth := 0;
 
       if Orientation = soHorizontal then
       begin
@@ -2079,7 +2069,24 @@ begin
 
       if Assigned(LItem.ButtonPanel) then
       begin
-        LItem.ButtonPanel.Width := LItem.Button.Width + LItem.DropdownButton.Width;
+        if Orientation = soHorizontal then
+        begin
+          LItem.ButtonPanel.Align := alLeft;
+
+          if Assigned(LItem.DropdownButton) then
+          begin
+            if LTextWidth > ScaleInt(FDefaults.ButtonSize) then
+              LItem.ButtonPanel.Width := LTextWidth + ScaleInt(LItem.Dropdown.ButtonWidth)
+            else
+              LItem.ButtonPanel.Width := ScaleInt(FDefaults.ButtonSize) + ScaleInt(LItem.Dropdown.ButtonWidth)
+          end;
+        end
+        else
+        begin
+          LItem.ButtonPanel.Align := alTop;
+          LItem.ButtonPanel.Width := LItem.Button.Width + LItem.DropdownButton.Width;
+        end;
+
         LItem.ButtonPanel.Height := LItem.Button.Height;
         LItem.Button.Align := alClient;
       end;
