@@ -305,7 +305,7 @@ type
   TButtonBar = class(TButtonBarPageScroller)
   private
     FAutoSize: Boolean;
-    FButtonPanel: TButtonBarPanel;
+    FButtonBarPanel: TButtonBarPanel;
     FCanvas: TCanvas;
 {$IF CompilerVersion < 35}
     FDrawLockCount: Cardinal;
@@ -332,12 +332,12 @@ type
     procedure AutoSizeButtonBar;
     procedure CMRecreateWnd(var AMessage: TMessage); message CM_RECREATEWND;
     procedure CMVisibleChanged(var AMessage: TMessage); message CM_VISIBLECHANGED;
-    procedure CreateButtonPanel;
+    procedure CreateButtonBarPanel;
     procedure CreateDropdownButton(var AItem: TButtonBarCollectionItem);
     procedure DoDefaultChange(ASender: TObject);
     procedure DummyClickEvent(ASender: TObject);
     procedure LockPainting;
-    procedure SetButtonPanelSize;
+    procedure SetButtonBarPanelSize;
     procedure SetImages(const AValue: TCustomImageList);
     procedure SetItems(const AValue: TButtonBarCollection);
     procedure SetOptions(const AValue: TButtonBarOptions);
@@ -1533,21 +1533,21 @@ begin
     Result := False;
 end;
 
-procedure TButtonBar.CreateButtonPanel;
+procedure TButtonBar.CreateButtonBarPanel;
 begin
-  if Assigned(FButtonPanel) then
+  if Assigned(FButtonBarPanel) then
     Exit;
 
-  FButtonPanel := TButtonBarPanel.Create(Self);
-  FButtonPanel.ParentBackground := IsParentTabSheet(Self);
-  FButtonPanel.ParentColor := True;
-  FButtonPanel.ParentDoubleBuffered := True;
-  FButtonPanel.BevelOuter := bvNone;
-  FButtonPanel.Left := 0;
-  FButtonPanel.Top := 0;
-  FButtonPanel.Parent := Self;
+  FButtonBarPanel := TButtonBarPanel.Create(Self);
+  FButtonBarPanel.ParentBackground := IsParentTabSheet(Self);
+  FButtonBarPanel.ParentColor := True;
+  FButtonBarPanel.ParentDoubleBuffered := True;
+  FButtonBarPanel.BevelOuter := bvNone;
+  FButtonBarPanel.Left := 0;
+  FButtonBarPanel.Top := 0;
+  FButtonBarPanel.Parent := Self;
 
-  Control := FButtonPanel;
+  Control := FButtonBarPanel;
 
   FWidth := Width;
   FHeight := Height;
@@ -1555,8 +1555,8 @@ end;
 
 procedure TButtonBar.UpdateParentBackground;
 begin
-  if Assigned(FButtonPanel) then
-    FButtonPanel.ParentBackground := IsParentTabSheet(Self);
+  if Assigned(FButtonBarPanel) then
+    FButtonBarPanel.ParentBackground := IsParentTabSheet(Self);
 end;
 
 procedure TButtonBar.Clear;
@@ -1566,26 +1566,47 @@ end;
 
 procedure TButtonBar.CreateButton(var AItem: TButtonBarCollectionItem);
 begin
-  AItem.Button := TButtonBarControl.Create(FButtonPanel);
-  AItem.Button.Parent := FButtonPanel;
+  AItem.Button := TButtonBarControl.Create(FButtonBarPanel);
+  AItem.Button.Parent := FButtonBarPanel;
 end;
+
+{$IFDEF ALPHASKINS}
+function IsParentRollOutPanel(const AControl: TWinControl): Boolean;
+begin
+  if Assigned(AControl) then
+  begin
+    if AControl is TsRollOutPanel then
+      Result := True
+    else
+      Result := IsParentRollOutPanel(AControl.Parent);
+  end
+  else
+    Result := False;
+end;
+{$ENDIF}
 
 procedure TButtonBar.CreateDropdownButton(var AItem: TButtonBarCollectionItem);
 begin
   if Assigned(AItem.DropdownButton) then
     Exit;
 
-  AItem.ButtonPanel := TButtonBarPanel.Create(FButtonPanel);
+  { Button panel }
+  AItem.ButtonPanel := TButtonBarPanel.Create(FButtonBarPanel);
   AItem.ButtonPanel.ParentBackground := True;
   AItem.ButtonPanel.ParentColor := True;
   AItem.ButtonPanel.ParentDoubleBuffered := True;
+{$IFDEF ALPHASKINS}
+  // TODO: Possible Delphi 12 issue. Test without following code after patch release.
+  if IsParentRollOutPanel(Self) then
+    AItem.ButtonPanel.SkinData.SkinSection := 'PANEL_LOW';
+{$ENDIF}
   AItem.ButtonPanel.BevelOuter := bvNone;
-  AItem.ButtonPanel.Parent := FButtonPanel;
-
+  AItem.ButtonPanel.Parent := FButtonBarPanel;
+  { Button move }
   AItem.Button.Align := alClient;
   AItem.Button.Parent := AItem.ButtonPanel;
-
-  AItem.DropdownButton := TButtonBarControl.Create(FButtonPanel);
+  { Dropdown buttons }
+  AItem.DropdownButton := TButtonBarControl.Create(FButtonBarPanel);
   AItem.DropdownButton.Align := alRight;
   AItem.DropdownButton.Parent := AItem.ButtonPanel;
 end;
@@ -1636,6 +1657,7 @@ begin
     LTop := 0;
 
     LButtonFound := False;
+
     for LIndex := 0 to FItems.Count - 1 do
     begin
       LItem := FItems.Item[LIndex];
@@ -1721,14 +1743,14 @@ begin
   Result := FItems.UpdateCount > 0;
 end;
 
-procedure TButtonBar.SetButtonPanelSize;
+procedure TButtonBar.SetButtonBarPanelSize;
 begin
-  if Assigned(Parent) and Assigned(FButtonPanel) then
+  if Assigned(Parent) and Assigned(FButtonBarPanel) then
   begin
     if Orientation = soHorizontal then
-      FButtonPanel.Height := Height
+      FButtonBarPanel.Height := Height
     else
-      FButtonPanel.Width := Width;
+      FButtonBarPanel.Width := Width;
   end;
 end;
 
@@ -1814,12 +1836,12 @@ begin
     ([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
     Exit;
 
-  CreateButtonPanel;
+  CreateButtonBarPanel;
 
   if AIsLast or (FItems.Count = 0) then
   begin
-    if Assigned(FButtonPanel) then
-      FreeAndNil(FButtonPanel);
+    if Assigned(FButtonBarPanel) then
+      FreeAndNil(FButtonBarPanel);
 
     Invalidate;
     Exit;
@@ -1827,18 +1849,18 @@ begin
 
   LockPainting;
   try
-    FButtonPanel.AutoSize := False;
-    FButtonPanel.Left := 0;
-    FButtonPanel.Top := 0;
+    FButtonBarPanel.AutoSize := False;
+    FButtonBarPanel.Left := 0;
+    FButtonBarPanel.Top := 0;
 
-    SetButtonPanelSize;
+    SetButtonBarPanelSize;
 
     for LIndex := 0 to FItems.Count - 1 do
       Assign(FItems.Item[LIndex]);
 
     UpdateButtonPositions;
 
-    FButtonPanel.AutoSize := True;
+    FButtonBarPanel.AutoSize := True;
 
     if FAutoSize then
       AutoSizeButtonBar;
@@ -2140,7 +2162,7 @@ begin
       UpdateButtons;
   end
   else
-    SetButtonPanelSize;
+    SetButtonBarPanelSize;
 end;
 
 procedure TButtonBar.PaintWindow(DC: HDC);
