@@ -1714,23 +1714,21 @@ begin
         end;
       end
       else
+      if Assigned(LItem.ButtonPanel) then
       begin
-        if Assigned(LItem.ButtonPanel) then
-        begin
-          LItem.ButtonPanel.Top := LTop;
+        LItem.ButtonPanel.Top := LTop;
 
-          Inc(LTop, LItem.ButtonPanel.Height);
-        end
-        else
-        begin
-          LItem.Button.Top := LTop;
+        Inc(LTop, LItem.ButtonPanel.Height);
+      end
+      else
+      begin
+        LItem.Button.Top := LTop;
 
-          if LItem.Button.Visible then
-            Inc(LTop, LItem.Button.Height);
+        if LItem.Button.Visible then
+          Inc(LTop, LItem.Button.Height);
 
-          if LItem.Button.AlignWithMargins then
-            Inc(LTop, LItem.Button.Margins.Top + LItem.Button.Margins.Bottom);
-        end;
+        if LItem.Button.AlignWithMargins then
+          Inc(LTop, LItem.Button.Margins.Top + LItem.Button.Margins.Bottom);
       end;
     end;
   finally
@@ -1861,6 +1859,7 @@ begin
     UpdateButtonPositions;
 
     FButtonBarPanel.AutoSize := True;
+    FButtonBarPanel.AutoSize := Orientation = soHorizontal; { Vertical button bar can be resized }
 
     if FAutoSize then
       AutoSizeButtonBar;
@@ -1941,13 +1940,13 @@ begin
       LItem.Button.TextAlignment := taLeftJustify;
 {$ENDIF}
     end
+{$IFDEF ALPHASKINS}
     else
     begin
-{$IFDEF ALPHASKINS}
       LItem.Button.Alignment := taCenter;
       LItem.Button.TextAlignment := taCenter;
-{$ENDIF}
-    end;
+    end
+{$ENDIF};
 
     if csDesigning in ComponentState then
       LItem.Button.Visible := True
@@ -2054,14 +2053,15 @@ begin
         LItem.DropdownButton.SplitterStyle := dsLine;
 {$ENDIF}
       end
+{$IFDEF ALPHASKINS}
       else
       if Assigned(LItem.Button.DropdownMenu) then
       begin
-{$IFDEF ALPHASKINS}
+
         LItem.Button.ButtonStyle := tbsDropDown;
         LItem.Button.SplitterStyle := dsLine;
-{$ENDIF}
-      end;
+      end
+{$ENDIF};
 
       LTextWidth := 0;
 
@@ -2104,10 +2104,7 @@ begin
           end;
         end
         else
-        begin
           LItem.ButtonPanel.Align := alTop;
-          LItem.ButtonPanel.Width := LItem.Button.Width + LItem.DropdownButton.Width;
-        end;
 
         LItem.ButtonPanel.Height := LItem.Button.Height;
         LItem.Button.Align := alClient;
@@ -2232,12 +2229,7 @@ begin
       FCanvas.Brush.Color := Color;
 
     if StyleServices.Enabled and Assigned(Parent) and (csParentBackground in ControlStyle) then
-    begin
-      {if Parent.DoubleBuffered then
-        PerformEraseBackground(Self, FCanvas.Handle)
-      else  }
-        StyleServices.DrawParentBackground(Handle, FCanvas.Handle, nil, False);
-    end
+      StyleServices.DrawParentBackground(Handle, FCanvas.Handle, nil, False)
     else
       FCanvas.FillRect(ClientRect);
   end;
