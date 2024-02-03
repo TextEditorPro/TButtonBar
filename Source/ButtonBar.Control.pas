@@ -1592,7 +1592,7 @@ begin
 
   { Button panel }
   AItem.ButtonPanel := TButtonBarPanel.Create(FButtonBarPanel);
-  AItem.ButtonPanel.ParentBackground := True;
+  AItem.ButtonPanel.ParentBackground := IsParentTabSheet(Self);
   AItem.ButtonPanel.ParentColor := True;
   AItem.ButtonPanel.ParentDoubleBuffered := True;
 {$IFDEF ALPHASKINS}
