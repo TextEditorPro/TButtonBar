@@ -990,14 +990,14 @@ end;
 
 destructor TButtonBarCollectionItem.Destroy;
 begin
-  if Assigned(FButton) then
-    FreeAndNil(FButton);
-
   if Assigned(FActionLink) then
     FreeAndNil(FActionLink);
 
   FreeAndNil(FCounter);
   FreeAndNil(FDropdown);
+
+  if Assigned(FButton) then
+    FreeAndNil(FButton);
 
   inherited Destroy;
 end;
@@ -1470,9 +1470,11 @@ end;
 
 destructor TButtonBar.Destroy;
 begin
-  FreeAndNil(FItems);
-  FreeAndNil(FDefaults);
+  TControlCanvas(FCanvas).Control := nil;
+
   FreeAndNil(FCanvas);
+  FreeAndNil(FDefaults);
+  FreeAndNil(FItems);
 
   inherited Destroy;
 end;
@@ -1830,8 +1832,8 @@ procedure TButtonBar.UpdateButtons(const AIsLast: Boolean = False);
 var
   LIndex: Integer;
 begin
-  if InUpdateBlock or not (([csLoading, csReading] * ComponentState = []) or
-    ([csLoading, csDestroying] * ComponentState = []) or HandleAllocated) then
+  if InUpdateBlock or ([csLoading, csReading] * ComponentState <> []) and
+    ([csLoading, csDestroying] * ComponentState <> []) and not HandleAllocated then
     Exit;
 
   CreateButtonBarPanel;
