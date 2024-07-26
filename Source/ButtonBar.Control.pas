@@ -1597,11 +1597,6 @@ begin
   AItem.ButtonPanel.ParentBackground := IsParentTabSheet(Self);
   AItem.ButtonPanel.ParentColor := True;
   AItem.ButtonPanel.ParentDoubleBuffered := True;
-{$IFDEF ALPHASKINS}
-  // TODO: Possible Delphi 12 issue. Test without following code after patch release.
-  if IsParentRollOutPanel(Self) then
-    AItem.ButtonPanel.SkinData.SkinSection := 'PANEL_LOW';
-{$ENDIF}
   AItem.ButtonPanel.BevelOuter := bvNone;
   AItem.ButtonPanel.Parent := FButtonBarPanel;
   { Button move }
