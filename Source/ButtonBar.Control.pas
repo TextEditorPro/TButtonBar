@@ -1756,6 +1756,13 @@ begin
   AutoSizeButtonBar;
 end;
 
+{$IF NOT DEFINED(ALPHASKINS)}
+function TButtonBar.ScaleInt(const ANumber: Integer): Integer;
+begin
+  Result := Muldiv(ANumber, CurrentPPI, 96);
+end;
+{$ENDIF}
+
 procedure TButtonBar.AutoSizeButtonBar;
 var
   LHeightMargins, LWidthMargins: Integer;
@@ -1877,13 +1884,6 @@ begin
   Result := StringReplace(Result, '&', '', [rfReplaceAll]);
   Result := StringReplace(Result, '...', '', [rfReplaceAll]);
 end;
-
-{$IF NOT DEFINED(ALPHASKINS)}
-function TButtonBar.ScaleInt(const ANumber: Integer): Integer;
-begin
-  Result := Muldiv(ANumber, CurrentPPI, 96);
-end;
-{$ENDIF}
 
 procedure TButtonBar.Assign(ASource: TPersistent);
 var
