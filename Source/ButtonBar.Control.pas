@@ -67,6 +67,7 @@ type
     FInvisible: Boolean;
     FMainControl: TButtonBarControl;
     FOnBeforeMenuDropdown: TNotifyEvent;
+    FOrientation: TPageScrollerOrientation;
     FSkipDropdown: Boolean;
     FStyle: TButtonBarControlStyle;
     function GetArrowColor: TColor;
@@ -93,6 +94,7 @@ type
     property Invisible: Boolean read FInvisible write FInvisible default False;
     property MainControl: TButtonBarControl read FMainControl write FMainControl;
     property OnBeforeMenuDropdown: TNotifyEvent read FOnBeforeMenuDropdown write FOnBeforeMenuDropdown;
+    property Orientation: TPageScrollerOrientation read FOrientation write FOrientation;
     property Style: TButtonBarControlStyle read FStyle write SetStyle default csButton;
   end;
 
@@ -469,6 +471,7 @@ var
   LPoint: TPoint;
   LPanel: TButtonBarPanel;
   LControl: TButtonBarControl;
+  LLeft: Integer;
 begin
   if csDesigning in ComponentState then
     Exit;
@@ -494,7 +497,12 @@ begin
       else
         LControl := Self;
 
-      LPoint := LControl.ClientToScreen(Point(0, LControl.Height));
+      if (Orientation = soVertical) and (CurrentPPI <> 96) then
+        LLeft := LControl.Margins.Left
+      else
+        LLeft := 0;
+
+      LPoint := LControl.ClientToScreen(Point(LLeft, LControl.Height));
 
       if Assigned(FOnBeforeMenuDropdown) then
         FOnBeforeMenuDropdown(Self);
@@ -1570,6 +1578,7 @@ procedure TButtonBar.CreateButton(var AItem: TButtonBarCollectionItem);
 begin
   AItem.Button := TButtonBarControl.Create(FButtonBarPanel);
   AItem.Button.Parent := FButtonBarPanel;
+  AItem.Button.Orientation := Orientation;
 end;
 
 {$IFDEF ALPHASKINS}
@@ -1605,6 +1614,7 @@ begin
   { Dropdown buttons }
   AItem.DropdownButton := TButtonBarControl.Create(FButtonBarPanel);
   AItem.DropdownButton.Align := alRight;
+  AItem.DropdownButton.Orientation := Orientation;
   AItem.DropdownButton.Parent := AItem.ButtonPanel;
 end;
 
@@ -1772,6 +1782,18 @@ begin
   if (FItems.Count = 0) or (Align <> alNone) then
     Exit;
 
+  LItem := nil;
+
+  for LIndex := FItems.Count - 1 downto 0 do
+  if FItems.Item[LIndex].Visible then
+  begin
+    LItem := FItems.Item[LIndex];
+    Break;
+  end;
+
+  if not Assigned(LItem) then
+    Exit;
+
   LHeightMargins := 0;
   LWidthMargins := 0;
 
@@ -1780,8 +1802,6 @@ begin
     LWidthMargins := Margins.Left + Margins.Right;
     LHeightMargins := Margins.Top + Margins.Bottom;
   end;
-
-  LItem := FItems.Item[FItems.Count - 1];
 
   if Orientation = soHorizontal then
   begin
@@ -1796,7 +1816,7 @@ begin
   else
   begin
     LWidth := 0;
-    LHeight := 0;
+    LHeight := LItem.Button.Top + LItem.Button.Height;
 
     for LIndex := 0 to FItems.Count - 1 do
     begin
@@ -1804,12 +1824,6 @@ begin
 
       if Assigned(LItem.Button) and LItem.Visible then
       begin
-        if LItem.Button.Top + LItem.Button.Height > LHeight then
-          LHeight := LItem.Button.Top + LItem.Button.Height + LItem.Button.Margin + LItem.Button.Margins.Bottom;
-
-        if LItem.Button.Style in [csHorizontalDivider, csVerticalDivider] then
-          Inc(LHeight, LItem.Button.Margin);
-
         LItem.Button.Canvas.Font.Assign(Font);
 
         LTextWidth := LItem.Button.Canvas.TextWidth(LItem.Button.Caption) + ScaleInt(2 * FDefaults.TextMargin);
@@ -2199,6 +2213,7 @@ begin
     FCanvas.Font.Color := TColors.White;
     FCanvas.Font.Quality := fqAntialiased;
     FCanvas.Font.Style := [fsBold];
+    FCanvas.Font.Height := Font.Height;
 
     LTextWidth := FCanvas.TextWidth(ButtonBarNoItemsFound);
     LFlags := DT_VCENTER or DT_SINGLELINE;
@@ -2328,3 +2343,4 @@ begin
 end;
 
 end.
+
