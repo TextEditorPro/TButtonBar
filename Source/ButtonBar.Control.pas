@@ -462,7 +462,12 @@ function TButtonBarControl.IsMouseOverControl: Boolean;
 var
   LPoint: TPoint;
 begin
-  LPoint := ScreenToClient(Mouse.CursorPos);
+  try
+    LPoint := ScreenToClient(Mouse.CursorPos);
+  except
+    LPoint := Point(0, 0);
+  end;
+
   Result := PtInRect(ClientRect, LPoint);
 end;
 
@@ -1698,7 +1703,7 @@ begin
     begin
       LItem := FItems.Item[LIndex];
 
-      if not Assigned(LItem.Button) then
+      if not LItem.Visible or not Assigned(LItem.Button) then
         Continue;
 
       if Orientation = soHorizontal then
