@@ -1434,8 +1434,9 @@ procedure TButtonBarCollection.EndUpdate;
 begin
   inherited EndUpdate;
 
-  if ([csLoading, csDestroying] * TButtonBar(Owner).ComponentState) = [] then
-    TButtonBar(Owner).UpdateButtons;
+  if UpdateCount = 0 then
+    if ([csLoading, csDestroying] * TButtonBar(Owner).ComponentState) = [] then
+      TButtonBar(Owner).UpdateButtons;
 end;
 
 { TButtonBar }
