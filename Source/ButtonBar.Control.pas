@@ -55,7 +55,7 @@ type
     property Visible: Boolean read FVisible write SetVisible default False;
   end;
 
-  TButtonBarControlStyle = (csButton, csDropdown, csHorizontalDivider, csVerticalDivider);
+  TButtonBarControlStyle = (csButton, csDropdown, csHorizontalDivider, csVerticalDivider, csSpace);
 
   TButtonBarControl = class(TButtonBarSpeedButton)
   private
@@ -176,7 +176,7 @@ type
 
   TSTCounterChangedEvent = procedure(Sender: TButtonBarCollectionItem; const ACounter: Integer; var AImageIndex: System.UITypes.TImageIndex) of object;
 
-  TButtonBarItemStyle = (stButton, stDivider);
+  TButtonBarItemStyle = (stButton, stDivider, stSpace);
 
   TButtonBarCollectionItem = class(TCollectionItem)
   strict private
@@ -596,7 +596,9 @@ begin
 
             DrawArrow(LLeft, LTop);
           end;
-        end
+        end;
+      csSpace:
+        ;
       else
         inherited;
 
@@ -1380,7 +1382,7 @@ end;
 
 function TButtonBarCollectionItem.GetDisplayName: string;
 begin
-  if FStyle = stDivider then
+  if FStyle in [stDivider, stSpace] then
     Result := StringOfChar(ButtonBarItemDividerChar[1], 10)
   else
   if FName.IsEmpty then
@@ -1587,21 +1589,6 @@ begin
   AItem.Button.Orientation := Orientation;
 end;
 
-{$IFDEF ALPHASKINS}
-function IsParentRollOutPanel(const AControl: TWinControl): Boolean;
-begin
-  if Assigned(AControl) then
-  begin
-    if AControl is TsRollOutPanel then
-      Result := True
-    else
-      Result := IsParentRollOutPanel(AControl.Parent);
-  end
-  else
-    Result := False;
-end;
-{$ENDIF}
-
 procedure TButtonBar.CreateDropdownButton(var AItem: TButtonBarCollectionItem);
 begin
   if Assigned(AItem.DropdownButton) then
@@ -1676,7 +1663,7 @@ begin
       LItem := FItems.Item[LIndex];
 
       case LItem.Style of
-        stDivider:
+        stDivider, stSpace:
           begin
             LItem.Visible := LButtonFound;
             LButtonFound := False;
@@ -1692,7 +1679,7 @@ begin
       LItem := FItems.Item[LIndex];
 
       case LItem.Style of
-        stDivider:
+        stDivider, stSpace:
           LItem.Visible := False;
         stButton:
           if LItem.Visible then
@@ -1883,7 +1870,6 @@ begin
     UpdateButtonPositions;
 
     FButtonBarPanel.AutoSize := True;
-    FButtonBarPanel.AutoSize := Orientation = soHorizontal; { Vertical button bar can be resized }
 
     if FAutoSize then
       AutoSizeButtonBar;
@@ -1982,7 +1968,7 @@ begin
     if Assigned(LItem.Counter) then
       LItem.Button.Counter.Assign(LItem.Counter);
 
-    if (LItem.Style = stDivider) or not LShowCaption then
+    if (LItem.Style in [stDivider, stSpace]) or not LShowCaption then
       LItem.Button.Caption := ''
     else
     begin
@@ -1999,24 +1985,36 @@ begin
     else
       LItem.Button.Align := alTop;
 
-    if LItem.Style = stDivider then
+    if LItem.Style in [stDivider, stSpace] then
     begin
       LItem.Button.Margin := ScaleInt(FDefaults.DividerMargin);
 
       if Orientation = soHorizontal then
       begin
         LItem.Button.Width := ScaleInt(FDefaults.DividerSize);
-        LItem.Button.Style := csVerticalDivider;
+
+        if LItem.Style = stDivider then
+          LItem.Button.Style := csVerticalDivider
+        else
+          LItem.Button.Style := csSpace;
       end
       else
       begin
         LItem.Button.Height := ScaleInt(FDefaults.DividerSize);
-        LItem.Button.Style := csHorizontalDivider;
+
+        if LItem.Style = stDivider then
+          LItem.Button.Style := csHorizontalDivider
+        else
+          LItem.Button.Style := csSpace;
       end;
 {$IFDEF ALPHASKINS}
       LItem.Button.AlignWithMargins := True;
       LItem.Button.Margin := ScaleInt(4);
-      LItem.Button.ButtonStyle := tbsDivider;
+
+      if LItem.Style = stDivider then
+        LItem.Button.ButtonStyle := tbsDivider
+      else
+        LItem.Button.ButtonStyle := tbsSeparator;
 {$ENDIF}
     end;
 
@@ -2199,6 +2197,8 @@ begin
 end;
 
 procedure TButtonBar.Paint;
+const
+  ROTATE_ANGLE = 900;
 var
   LRect: TRect;
   LTextHeight, LTextWidth: Integer;
@@ -2226,7 +2226,7 @@ begin
 
     if Width < LTextWidth then
     begin
-      FCanvas.Font.Orientation := 900;
+      FCanvas.Font.Orientation := ROTATE_ANGLE;
       LTextHeight := FCanvas.TextHeight(ButtonBarNoItemsFound);
       LRect.Top := LTextWidth;
       LRect.Left := (Width - LTextHeight) div 2;

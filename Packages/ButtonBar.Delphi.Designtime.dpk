@@ -1,4 +1,4 @@
-﻿package ButtonBar.Delphi.Athens.Designtime;
+﻿package ButtonBar.Delphi.Designtime;
 
 {$R *.res}
 {$R *.dres}
@@ -27,13 +27,14 @@
 {$DEFINE RELEASE}
 {$ENDIF IMPLICITBUILDING}
 {$DESCRIPTION 'TButtonBar control package - designtime'}
+{$LIBSUFFIX AUTO}
 {$DESIGNONLY}
 {$IMPLICITBUILD ON}
 
 requires
   designide,
   rtl,
-  ButtonBar.Delphi.Athens.Runtime;
+  ButtonBar.Delphi.Runtime;
 
 contains
   ButtonBar.Register in '..\Source\ButtonBar.Register.pas',
