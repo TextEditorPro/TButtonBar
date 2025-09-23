@@ -80,6 +80,7 @@ type
     procedure SetStyle(const AValue: TButtonBarControlStyle);
   protected
     procedure MouseDown(AButton: TMouseButton; AShift: TShiftState; X, Y: Integer); override;
+    procedure Notification(AComponent: TComponent; AOperation: TOperation); override;
 {$IF NOT DEFINED(ALPHASKINS)}
     procedure Paint; override;
 {$ENDIF}
@@ -362,6 +363,7 @@ type
     procedure CreateButton(var AItem: TButtonBarCollectionItem);
     procedure HideButtons(const ANames: array of string);
     procedure Loaded; override;
+    procedure Notification(AComponent: TComponent; AOperation: TOperation); override;
     procedure Paint; {$IFDEF ALPHASKINS}override;{$ELSE}virtual;{$ENDIF}
     procedure PaintWindow(DC: HDC); override;
     procedure UpdateParentBackground;
@@ -651,10 +653,21 @@ begin
 end;
 {$ENDIF}
 
+procedure TButtonBarControl.Notification(AComponent: TComponent; AOperation: TOperation);
+begin
+  inherited;
+
+  if (AOperation = opRemove) and (AComponent = FDropdownMenu) then
+    FDropdownMenu := nil;
+end;
+
 procedure TButtonBarControl.SetDropdownMenu(const AValue: TPopupMenu);
 begin
   if AValue <> FDropdownMenu then
   begin
+    if Assigned(FDropdownMenu) then
+      FDropdownMenu.RemoveFreeNotification(Self);
+
     FDropdownMenu := AValue;
 
     if Assigned(AValue) then
@@ -1889,6 +1902,23 @@ begin
 
   Result := StringReplace(Result, '&', '', [rfReplaceAll]);
   Result := StringReplace(Result, '...', '', [rfReplaceAll]);
+end;
+
+procedure TButtonBar.Notification(AComponent: TComponent; AOperation: TOperation);
+var
+  LIndex: Integer;
+  LItem: TButtonBarCollectionItem;
+begin
+  inherited;
+
+  if (AOperation = opRemove) and (AComponent is TPopupMenu) then
+  for LIndex := 0 to FItems.Count - 1 do
+  begin
+    LItem := Item[LIndex];
+
+    if AComponent = LItem.DropdownMenu then
+      LItem.DropdownMenu := nil;
+  end;
 end;
 
 procedure TButtonBar.Assign(ASource: TPersistent);
