@@ -1951,7 +1951,6 @@ begin
     LItem.Button.IgnoreFocus := opIgnoreFocus in FOptions;
     LItem.Button.Invisible := (csDesigning in ComponentState) and not LItem.Visible;
     LItem.Button.OnBeforeMenuDropdown := OnBeforeMenuDropdown;
-    LItem.Button.OnClick := LItem.OnClick;
     LItem.Button.OnMouseEnter := LItem.OnMouseEnter;
     LItem.Button.OnMouseLeave := LItem.OnMouseLeave;
     LItem.Button.OnMouseMove := LItem.OnMouseMove;
@@ -2102,7 +2101,6 @@ begin
       else
       if Assigned(LItem.Button.DropdownMenu) then
       begin
-
         LItem.Button.ButtonStyle := tbsDropDown;
         LItem.Button.SplitterStyle := dsLine;
       end
@@ -2187,6 +2185,7 @@ begin
     if Assigned(LItem.Action) then
       LItem.Action.Execute
     else
+    if Assigned(LItem.OnClick) then
       LItem.OnClick(nil);
   end;
 end;
@@ -2211,17 +2210,17 @@ procedure TButtonBar.PaintWindow(DC: HDC);
 begin
   if Visible or (csDesigning in ComponentState) then
   begin
-  FCanvas.Lock;
-  try
-    FCanvas.Handle := DC;
+    FCanvas.Lock;
     try
-      TControlCanvas(FCanvas).UpdateTextFlags;
-      Paint;
+      FCanvas.Handle := DC;
+      try
+        TControlCanvas(FCanvas).UpdateTextFlags;
+        Paint;
+      finally
+        FCanvas.Handle := 0;
+      end;
     finally
-      FCanvas.Handle := 0;
-    end;
-  finally
-    FCanvas.Unlock;
+      FCanvas.Unlock;
     end;
   end;
 end;
